@@ -36,11 +36,26 @@ jobs:
       - name: Rename application executable
         run: Rename-Item ./publish/Gaugr.App.exe Gaugr.exe
 
-      - name: Upload executable artifact
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $version = if ($env:GITHUB_REF -match '^refs/tags/v(.+)$') { $Matches[1] } else { '0.1.0' }
+          & "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" "installer/Gaugr.iss"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload portable executable
         uses: actions/upload-artifact@v4
         with:
-          name: Gaugr-windows-x64
+          name: Gaugr-portable-windows-x64
           path: ./publish/Gaugr.exe
+          if-no-files-found: error
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gaugr-installer-windows-x64
+          path: ./publish/Gaugr-Setup.exe
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -49,4 +64,6 @@ jobs:
         with:
           name: Gaugr ${{ github.ref_name }}
           generate_release_notes: true
-          files: ./publish/Gaugr.exe
+          files: |
+            ./publish/Gaugr.exe
+            ./publish/Gaugr-Setup.exe
