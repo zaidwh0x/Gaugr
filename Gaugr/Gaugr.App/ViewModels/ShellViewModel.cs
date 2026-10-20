@@ -10,6 +10,7 @@ public partial class ShellViewModel : ObservableObject
 {
     private readonly OverviewViewModel _overview;
     private readonly PerformanceViewModel _performance;
+    private readonly ProcessesViewModel _processes;
 
     [ObservableProperty] private object _currentPage;
 
@@ -17,16 +18,20 @@ public partial class ShellViewModel : ObservableObject
     {
         _overview = new OverviewViewModel(hub);
         _performance = new PerformanceViewModel(hub);
+        _processes = new ProcessesViewModel();
         _currentPage = _overview;
     }
 
     [RelayCommand]
     private void Navigate(string name)
     {
+        _processes.SetActive(name == "Processes");
+
         CurrentPage = name switch
         {
             "Overview" => (object)_overview,
             "Performance" => _performance,
+            "Processes" => _processes,
             _ => new PlaceholderViewModel(name)
         };
     }
