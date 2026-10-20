@@ -41,7 +41,18 @@ jobs:
         run: |
           choco install innosetup --no-progress -y
           $version = if ($env:GITHUB_REF -match '^refs/tags/v(.+)$') { $Matches[1] } else { '0.1.0' }
-          & "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" "installer/Gaugr.iss"
+          $compiler = @(
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ChocolateyInstall\lib\innosetup\tools\ISCC.exe"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $compiler) {
+            $compiler = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          }
+          if (-not $compiler) {
+            throw "Could not locate ISCC.exe. Inno Setup may be installed in a different location."
+          }
+          & $compiler "/DMyAppVersion=$version" "installer/Gaugr.iss"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload portable executable
