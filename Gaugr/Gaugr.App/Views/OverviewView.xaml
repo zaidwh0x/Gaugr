@@ -1,0 +1,27 @@
+﻿<UserControl x:Class="Gaugr.App.Views.OverviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Gaugr.App.Controls">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="8,0,0,20">
+            <TextBlock Text="Overview" Foreground="White" FontSize="32" FontWeight="SemiBold"/>
+            <TextBlock Text="How's your PC running today?" Foreground="#8A92A3" FontSize="15"/>
+        </StackPanel>
+
+        <UniformGrid Grid.Row="1" Rows="2" Columns="2">
+            <controls:MetricCard Title="CPU" Subtitle="{Binding CpuName}"
+                                 Value="{Binding CpuTemp}" Unit="°C" Caption="Temperature"/>
+            <controls:MetricCard Title="GPU" Subtitle="{Binding GpuName}"
+                                 Value="{Binding GpuTemp}" Unit="°C" Caption="Temperature"/>
+            <controls:MetricCard Title="RAM" Subtitle="{Binding RamLabel}"
+                                 Value="{Binding RamPercent}" Unit="%" Caption="Utilization"/>
+            <controls:MetricCard Title="Storage" Subtitle="{Binding StorageLabel}"
+                                 Value="{Binding StoragePercent}" Unit="%" Caption="Utilization"/>
+        </UniformGrid>
+    </Grid>
+</UserControl>

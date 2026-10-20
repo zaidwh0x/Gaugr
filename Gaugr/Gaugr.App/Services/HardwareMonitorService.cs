@@ -4,8 +4,8 @@ using System.IO;
 namespace Gaugr.App.Services;
 
 public record HardwareSnapshot(
-    string CpuName, double CpuTemp,
-    string GpuName, double GpuTemp,
+    string CpuName, double CpuTemp, double CpuLoad,
+    string GpuName, double GpuTemp, double GpuLoad,
     double RamPercent, string RamLabel,
     double StoragePercent, string StorageLabel);
 
@@ -23,7 +23,8 @@ public sealed class HardwareMonitorService : IDisposable
     public HardwareSnapshot Read()
     {
         string cpuName = "CPU", gpuName = "GPU";
-        double cpuTemp = 0, gpuTemp = 0, ramPercent = 0, ramUsed = 0, ramAvail = 0;
+        double cpuTemp = 0, cpuLoad = 0, gpuTemp = 0, gpuLoad = 0;
+        double ramPercent = 0, ramUsed = 0, ramAvail = 0;
 
         foreach (var hw in _computer.Hardware)
         {
@@ -34,17 +35,17 @@ public sealed class HardwareMonitorService : IDisposable
                 case HardwareType.Cpu:
                     cpuName = hw.Name;
                     cpuTemp = Get(hw, SensorType.Temperature, "Tctl", "Package", "Average", "Core");
+                    cpuLoad = Get(hw, SensorType.Load, "CPU Total");
                     break;
 
                 case HardwareType.GpuNvidia:
                 case HardwareType.GpuAmd:
                 case HardwareType.GpuIntel:
-                    // Prefer an NVIDIA card; otherwise keep the first GPU found
-                    // (this skips the CPU's built-in graphics on most gaming PCs)
                     if (hw.HardwareType == HardwareType.GpuNvidia || gpuName == "GPU")
                     {
                         gpuName = hw.Name;
                         gpuTemp = Get(hw, SensorType.Temperature, "GPU Core");
+                        gpuLoad = Get(hw, SensorType.Load, "GPU Core");
                     }
                     break;
 
@@ -70,12 +71,10 @@ public sealed class HardwareMonitorService : IDisposable
 
         string ramLabel = $"{ramUsed:0.0} / {ramUsed + ramAvail:0.0} GB";
 
-        return new HardwareSnapshot(cpuName, cpuTemp, gpuName, gpuTemp,
+        return new HardwareSnapshot(cpuName, cpuTemp, cpuLoad, gpuName, gpuTemp, gpuLoad,
                                     ramPercent, ramLabel, storagePercent, storageLabel);
     }
 
-    // Finds a sensor by name hint (exact match first, then "contains").
-    // Sensor names differ between CPUs/GPUs, so we try several hints.
     private static double Get(IHardware hw, SensorType type, params string[] hints)
     {
         var sensors = hw.Sensors.Where(s => s.SensorType == type && s.Value.HasValue).ToList();
