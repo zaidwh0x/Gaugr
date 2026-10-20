@@ -10,6 +10,7 @@ public partial class ShellViewModel : ObservableObject
 {
     private readonly OverviewViewModel _overview;
     private readonly PerformanceViewModel _performance;
+    private readonly HardwareViewModel _hardware;
     private readonly ProcessesViewModel _processes;
 
     [ObservableProperty] private object _currentPage;
@@ -18,6 +19,7 @@ public partial class ShellViewModel : ObservableObject
     {
         _overview = new OverviewViewModel(hub);
         _performance = new PerformanceViewModel(hub);
+        _hardware = new HardwareViewModel(hub);
         _processes = new ProcessesViewModel();
         _currentPage = _overview;
     }
@@ -31,6 +33,7 @@ public partial class ShellViewModel : ObservableObject
         {
             "Overview" => (object)_overview,
             "Performance" => _performance,
+            "Hardware" => _hardware,
             "Processes" => _processes,
             _ => new PlaceholderViewModel(name)
         };
