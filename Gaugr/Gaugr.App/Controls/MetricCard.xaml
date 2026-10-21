@@ -4,6 +4,25 @@
              xmlns:controls="clr-namespace:Gaugr.App.Controls"
              x:Name="root">
     <UserControl.Resources>
+        <!-- the readout is replaced by a "--" placeholder when the sensor gives no value -->
+        <Style x:Key="WhenAvailable" TargetType="FrameworkElement">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsAvailable, RelativeSource={RelativeSource AncestorType=controls:MetricCard}}"
+                             Value="False">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="WhenUnavailable" TargetType="FrameworkElement">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsAvailable, RelativeSource={RelativeSource AncestorType=controls:MetricCard}}"
+                             Value="False">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="ViewMoreButton" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontSize" Value="13"/>
@@ -75,16 +94,22 @@
                                     StartColor="{Binding GaugeStart, ElementName=root}"
                                     EndColor="{Binding GaugeEnd, ElementName=root}"/>
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,18,0,0">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                Style="{StaticResource WhenAvailable}">
                         <TextBlock Text="{Binding Value, ElementName=root, StringFormat={}{0:0}}"
                                    Foreground="White" FontSize="52" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Unit, ElementName=root}"
                                    Foreground="#8A92A3" FontSize="18" Margin="3,8,0,0"
                                    VerticalAlignment="Top"/>
                     </StackPanel>
+                    <TextBlock Text="--" Foreground="#5A6072" FontSize="52" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" Style="{StaticResource WhenUnavailable}"/>
                     <TextBlock Text="{Binding Caption, ElementName=root}"
                                Foreground="#B4BAC8" FontSize="14"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center" Style="{StaticResource WhenAvailable}"/>
+                    <TextBlock Text="{Binding UnavailableText, ElementName=root}"
+                               Foreground="#B4BAC8" FontSize="13"
+                               HorizontalAlignment="Center" Style="{StaticResource WhenUnavailable}"/>
                 </StackPanel>
             </Grid>
         </Grid>

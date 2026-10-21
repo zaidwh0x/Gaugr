@@ -80,10 +80,12 @@
             <UniformGrid Grid.Column="1" Rows="2" Columns="2">
                 <controls:MetricCard Title="CPU" Subtitle="{Binding CpuName}" Glyph="&#xE950;"
                                      Value="{Binding CpuTemp}" Unit="°C" Caption="Temperature"
+                                     IsAvailable="{Binding CpuAvailable}" UnavailableText="Install PawnIO"
                                      GaugeStart="#7FD8FF" GaugeEnd="#2F6BFF"
                                      ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Hardware"/>
                 <controls:MetricCard Title="GPU" Subtitle="{Binding GpuName}" Glyph="&#xE7F4;"
                                      Value="{Binding GpuTemp}" Unit="°C" Caption="Temperature"
+                                     IsAvailable="{Binding GpuAvailable}"
                                      GaugeStart="#7FD8FF" GaugeEnd="#2F6BFF"
                                      ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Hardware"/>
                 <controls:MetricCard Title="RAM" Subtitle="{Binding RamLabel}" Glyph="&#xE945;"

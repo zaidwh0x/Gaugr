@@ -16,6 +16,10 @@ Gaugr brings your PC's hardware readings and performance history into one clean,
 
 Gaugr requests administrator rights on launch, because Windows only exposes CPU temperatures and fan speeds to elevated processes. When running from a terminal or Visual Studio, start that tool as administrator.
 
+**CPU temperature needs the PawnIO driver.** Gaugr reads sensors through LibreHardwareMonitor, which uses the open-source [PawnIO](https://pawnio.eu) driver for low-level CPU access. If PawnIO is not installed, the CPU gauge shows "--" and asks you to install it. Install PawnIO once and restart Gaugr.
+
+**Windows SmartScreen:** Gaugr's installer and executable are not code-signed yet, so Windows may warn that the publisher is unknown. Choose **More info → Run anyway** if you trust the download.
+
 Some readings depend on hardware, drivers, and sensor support. Gaugr does not yet expose every metric on every PC.
 
 ## Built with
