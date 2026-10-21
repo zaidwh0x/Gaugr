@@ -4,11 +4,17 @@ namespace Gaugr.App.Services;
 public sealed class TrayService : IDisposable
 {
     private readonly System.Windows.Forms.NotifyIcon _icon;
+    private readonly System.Windows.Forms.ToolStripMenuItem _overlayItem;
 
     public TrayService()
     {
         var menu = new System.Windows.Forms.ContextMenuStrip();
         menu.Items.Add("Open Gaugr", null, (_, _) => OpenRequested?.Invoke());
+
+        _overlayItem = new System.Windows.Forms.ToolStripMenuItem("Compact overlay");
+        _overlayItem.Click += (_, _) => OverlayToggleRequested?.Invoke();
+        menu.Items.Add(_overlayItem);
+
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         menu.Items.Add("Exit", null, (_, _) => ExitRequested?.Invoke());
 
@@ -28,6 +34,9 @@ public sealed class TrayService : IDisposable
 
     public event Action? OpenRequested;
     public event Action? ExitRequested;
+    public event Action? OverlayToggleRequested;
+
+    public void SetOverlayChecked(bool value) => _overlayItem.Checked = value;
 
     public void Notify(string title, string message) =>
         _icon.ShowBalloonTip(6000, title, message, System.Windows.Forms.ToolTipIcon.Warning);

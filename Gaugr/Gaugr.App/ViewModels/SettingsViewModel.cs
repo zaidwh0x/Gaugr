@@ -58,6 +58,9 @@ public partial class SettingsViewModel : ObservableObject
         _startup = startup;
         _sendTestAlert = sendTestAlert;
 
+        // the overlay can also be switched from the tray menu
+        settings.Changed += () => OnPropertyChanged(nameof(OverlayEnabled));
+
         Thresholds =
         [
             Threshold("CPU temperature", "°C", 60, 100, AlertMetric.CpuTemperature),
@@ -97,6 +100,12 @@ public partial class SettingsViewModel : ObservableObject
     {
         get => _settings.AlertsEnabled;
         set => _settings.SetAlertsEnabled(value);
+    }
+
+    public bool OverlayEnabled
+    {
+        get => _settings.OverlayEnabled;
+        set => _settings.SetOverlayEnabled(value);
     }
 
     public bool StartWithWindows

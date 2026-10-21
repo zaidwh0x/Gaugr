@@ -28,6 +28,9 @@ public sealed class SettingsService
     public double RefreshSeconds => _data.RefreshSeconds;
     public bool CloseToTray => _data.CloseToTray;
     public bool AlertsEnabled => _data.AlertsEnabled;
+    public bool OverlayEnabled => _data.OverlayEnabled;
+    public double? OverlayLeft => _data.OverlayLeft;
+    public double? OverlayTop => _data.OverlayTop;
 
     public string TemperatureLabel => TemperatureUnit == TemperatureUnit.Fahrenheit ? "°F" : "°C";
 
@@ -72,6 +75,15 @@ public sealed class SettingsService
 
     public void SetAlertsEnabled(bool value) => Update(d => d.AlertsEnabled = value);
 
+    public void SetOverlayEnabled(bool value) => Update(d => d.OverlayEnabled = value);
+
+    // Saved while dragging the overlay, so nothing else needs to hear about it
+    public void SetOverlayPosition(double left, double top) => Update(d =>
+    {
+        d.OverlayLeft = left;
+        d.OverlayTop = top;
+    }, notify: false);
+
     public void SetAlertLimit(AlertMetric metric, int limit) => Update(d =>
     {
         limit = Math.Clamp(limit, 0, 100);
@@ -84,11 +96,11 @@ public sealed class SettingsService
         }
     });
 
-    private void Update(Action<SettingsData> change)
+    private void Update(Action<SettingsData> change, bool notify = true)
     {
         change(_data);
         Save();
-        Changed?.Invoke();
+        if (notify) Changed?.Invoke();
     }
 
     private void Save()
@@ -121,5 +133,8 @@ public sealed class SettingsService
         public int GpuAlert { get; set; } = 90;
         public int RamAlert { get; set; } = 95;
         public int StorageAlert { get; set; }
+        public bool OverlayEnabled { get; set; }
+        public double? OverlayLeft { get; set; }
+        public double? OverlayTop { get; set; }
     }
 }

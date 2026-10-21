@@ -13,6 +13,7 @@ Gaugr brings your PC's hardware readings and performance history into one clean,
 - **Hardware** — detected processor, graphics, memory, motherboard, clock, and fan information where available.
 - **Storage** — capacity, free space, and usage for every detected drive.
 - **Settings** — temperature unit (°C/°F), refresh rate, starting Gaugr with Windows, and keeping it running in the system tray. Settings are saved in `%AppData%\Gaugr\settings.json`.
+- **Compact overlay** — a small always-on-top panel with CPU, GPU, and memory readings that you can drag anywhere. Toggle it from Settings or the tray menu.
 - **Alerts** — Windows notifications when CPU or GPU temperature, memory usage, or storage usage crosses a limit you choose.
 - **Processes** — searchable process list with CPU and memory usage, sorting, and periodic refresh.
 - **Hardware monitoring** — sensor readings collected with LibreHardwareMonitor.
