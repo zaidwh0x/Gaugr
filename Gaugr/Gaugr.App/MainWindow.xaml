@@ -3,32 +3,37 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Gaugr.App.ViewModels"
         xmlns:views="clr-namespace:Gaugr.App.Views"
-        Title="Gaugr" Height="720" Width="1200"
-        Background="#0B0D12" WindowStartupLocation="CenterScreen">
+        Title="Gaugr" Height="780" Width="1280" MinHeight="640" MinWidth="1060"
+        Background="#08090D" WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI Variable Display, Segoe UI">
     <Window.Resources>
-        <Style x:Key="NavButton" TargetType="RadioButton">
+        <Style x:Key="NavButton" TargetType="Button">
             <Setter Property="Foreground" Value="#8A92A3"/>
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="bd" CornerRadius="10" Padding="14,10" Background="Transparent">
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="12" Padding="14,11" Background="{TemplateBinding Background}">
                             <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#161A23"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#1C2230"/>
+                                <Setter TargetName="bd" Property="Background" Value="#14171F"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="#2A2D36"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <DataTemplate DataType="{x:Type vm:OverviewViewModel}">
@@ -50,30 +55,53 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="240"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Background="#0F1218" BorderBrush="#1E232D" BorderThickness="0,0,1,0" Padding="16,28">
+        <!-- purple glow in the bottom-left corner -->
+        <Ellipse Grid.ColumnSpan="2" Width="900" Height="520" IsHitTestVisible="False"
+                 HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="-340,0,0,-300">
+            <Ellipse.Fill>
+                <RadialGradientBrush>
+                    <GradientStop Color="#557C5CFF" Offset="0"/>
+                    <GradientStop Color="#00000000" Offset="1"/>
+                </RadialGradientBrush>
+            </Ellipse.Fill>
+        </Ellipse>
+
+        <Border BorderBrush="#161A24" BorderThickness="0,0,1,0" Padding="20,30">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#0B0D13" Offset="0"/>
+                    <GradientStop Color="#0D1328" Offset="0.55"/>
+                    <GradientStop Color="#0B0D13" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+
             <StackPanel>
-                <TextBlock Text="Gaugr" Foreground="White" FontSize="28"
-                           FontWeight="SemiBold" Margin="14,0,0,24"/>
-                <RadioButton Content="Overview" GroupName="nav" IsChecked="True"
-                             Style="{StaticResource NavButton}"
-                             Command="{Binding NavigateCommand}" CommandParameter="Overview"/>
-                <RadioButton Content="Performance" GroupName="nav" Style="{StaticResource NavButton}"
-                             Command="{Binding NavigateCommand}" CommandParameter="Performance"/>
-                <RadioButton Content="Hardware" GroupName="nav" Style="{StaticResource NavButton}"
-                             Command="{Binding NavigateCommand}" CommandParameter="Hardware"/>
-                <RadioButton Content="Processes" GroupName="nav" Style="{StaticResource NavButton}"
-                             Command="{Binding NavigateCommand}" CommandParameter="Processes"/>
-                <RadioButton Content="Storage" GroupName="nav" Style="{StaticResource NavButton}"
-                             Command="{Binding NavigateCommand}" CommandParameter="Storage"/>
-                <RadioButton Content="Settings" GroupName="nav" Style="{StaticResource NavButton}"
-                             Command="{Binding NavigateCommand}" CommandParameter="Settings"/>
+                <TextBlock Text="GAUGR" Foreground="White" FontSize="28" FontWeight="ExtraBold"
+                           FontStyle="Italic" Margin="12,0,0,32"/>
+
+                <ItemsControl ItemsSource="{Binding NavItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource NavButton}"
+                                    Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding Name}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Glyph}" Width="22"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="16" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Name}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </Border>
 
-        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" Margin="32"/>
+        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" Margin="32,28,32,32"/>
     </Grid>
 </Window>

@@ -8,20 +8,79 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Margin="8,0,0,20">
-            <TextBlock Text="Overview" Foreground="White" FontSize="32" FontWeight="SemiBold"/>
-            <TextBlock Text="How's your PC running today?" Foreground="#8A92A3" FontSize="15"/>
+        <StackPanel Margin="8,0,0,22">
+            <TextBlock Text="Overview" Foreground="White" FontSize="14"/>
+            <TextBlock Text="{Binding WelcomeText}" Foreground="White" FontSize="38"
+                       FontWeight="Light" Margin="0,22,0,0"/>
+            <TextBlock Text="How's your PC running today?" Foreground="#8A92A3" FontSize="15" Margin="0,4,0,0"/>
         </StackPanel>
 
-        <UniformGrid Grid.Row="1" Rows="2" Columns="2">
-            <controls:MetricCard Title="CPU" Subtitle="{Binding CpuName}"
-                                 Value="{Binding CpuTemp}" Unit="°C" Caption="Temperature"/>
-            <controls:MetricCard Title="GPU" Subtitle="{Binding GpuName}"
-                                 Value="{Binding GpuTemp}" Unit="°C" Caption="Temperature"/>
-            <controls:MetricCard Title="RAM" Subtitle="{Binding RamLabel}"
-                                 Value="{Binding RamPercent}" Unit="%" Caption="Utilization"/>
-            <controls:MetricCard Title="Storage" Subtitle="{Binding StorageLabel}"
-                                 Value="{Binding StoragePercent}" Unit="%" Caption="Utilization"/>
-        </UniformGrid>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- health score -->
+            <Border Margin="8" Width="150" CornerRadius="22" Padding="18,22"
+                    BorderBrush="#1C2028" BorderThickness="1">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#13151C" Offset="0"/>
+                        <GradientStop Color="#0C0E13" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="&#xEB51;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   Foreground="#B4BAC8" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="Health" Foreground="#B4BAC8" FontSize="15" Margin="8,0,0,0"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Margin="0,12,0,0" HorizontalAlignment="Center"
+                            Background="#10151A" BorderBrush="#1B2A25" BorderThickness="1"
+                            CornerRadius="10" Padding="16,6">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="6" Height="6" Fill="#33D17A" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding HealthLabel}" Foreground="White" FontSize="13"
+                                       Margin="8,0,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Grid.Row="2" Margin="0,16,0,0" HorizontalAlignment="Center"
+                               Text="{Binding Health, StringFormat={}{0:0}%}"
+                               Foreground="White" FontSize="22" FontWeight="SemiBold"/>
+
+                    <controls:VerticalMeter Grid.Row="3" Margin="12,16,0,0" HorizontalAlignment="Left"
+                                            Width="68" Value="{Binding Health}"/>
+                </Grid>
+            </Border>
+
+            <UniformGrid Grid.Column="1" Rows="2" Columns="2">
+                <controls:MetricCard Title="CPU" Subtitle="{Binding CpuName}" Glyph="&#xE950;"
+                                     Value="{Binding CpuTemp}" Unit="°C" Caption="Temperature"
+                                     GaugeStart="#7FD8FF" GaugeEnd="#2F6BFF"
+                                     ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Hardware"/>
+                <controls:MetricCard Title="GPU" Subtitle="{Binding GpuName}" Glyph="&#xE7F4;"
+                                     Value="{Binding GpuTemp}" Unit="°C" Caption="Temperature"
+                                     GaugeStart="#7FD8FF" GaugeEnd="#2F6BFF"
+                                     ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Hardware"/>
+                <controls:MetricCard Title="RAM" Subtitle="{Binding RamLabel}" Glyph="&#xE945;"
+                                     Value="{Binding RamPercent}" Unit="%" Caption="Utilization"
+                                     GaugeStart="#FFD23C" GaugeEnd="#FF5A1F"
+                                     ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Performance"/>
+                <controls:MetricCard Title="Storage" Subtitle="{Binding StorageLabel}" Glyph="&#xEDA2;"
+                                     Value="{Binding StoragePercent}" Unit="%" Caption="Utilization"
+                                     GaugeStart="#FFD23C" GaugeEnd="#FF5A1F"
+                                     ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Storage"/>
+            </UniformGrid>
+        </Grid>
     </Grid>
 </UserControl>

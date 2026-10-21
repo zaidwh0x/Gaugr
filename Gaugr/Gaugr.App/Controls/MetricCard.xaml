@@ -3,33 +3,87 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:Gaugr.App.Controls"
              x:Name="root">
-    <Border Background="#12151C" BorderBrush="#1E232D" BorderThickness="1"
-            CornerRadius="16" Padding="24" Margin="8">
+    <UserControl.Resources>
+        <Style x:Key="ViewMoreButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="#161920" BorderBrush="#232733" BorderThickness="1"
+                                CornerRadius="10" Padding="18,10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#1F2330"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#343A4D"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border BorderBrush="#1C2028" BorderThickness="1" CornerRadius="22" Padding="26" Margin="8">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#13151C" Offset="0"/>
+                <GradientStop Color="#0C0E13" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.Background>
+
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="{Binding Title, ElementName=root}"
-                           Foreground="White" FontSize="26" FontWeight="SemiBold"/>
-                <TextBlock Text="{Binding Subtitle, ElementName=root}"
-                           Foreground="#8A92A3" FontSize="14" Margin="0,4,12,0"
-                           TextWrapping="Wrap"/>
-            </StackPanel>
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-            <Grid Grid.Column="1" Width="220" Height="220">
-                <controls:TickGauge Value="{Binding Value, ElementName=root}"/>
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Border Width="50" Height="50" CornerRadius="14" HorizontalAlignment="Left"
+                        Background="#171A22" BorderBrush="#232733" BorderThickness="1">
+                    <TextBlock Text="{Binding Glyph, ElementName=root}"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="22" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <TextBlock Grid.Row="1" Text="{Binding Title, ElementName=root}" Margin="0,18,0,0"
+                           Foreground="White" FontSize="26" FontWeight="SemiBold"/>
+                <TextBlock Grid.Row="2" Text="{Binding Subtitle, ElementName=root}"
+                           Foreground="#8A92A3" FontSize="14" Margin="0,4,12,0"
+                           TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+
+                <Button Grid.Row="3" Content="View more" HorizontalAlignment="Left" Margin="0,16,0,0"
+                        Style="{StaticResource ViewMoreButton}"
+                        Command="{Binding ViewMoreCommand, ElementName=root}"
+                        CommandParameter="{Binding ViewMoreParameter, ElementName=root}"/>
+            </Grid>
+
+            <Grid Grid.Column="1" Width="230" Height="230" VerticalAlignment="Center">
+                <controls:TickGauge Value="{Binding Value, ElementName=root}"
+                                    StartColor="{Binding GaugeStart, ElementName=root}"
+                                    EndColor="{Binding GaugeEnd, ElementName=root}"/>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,18,0,0">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <TextBlock Text="{Binding Value, ElementName=root, StringFormat={}{0:0}}"
-                                   Foreground="White" FontSize="44" FontWeight="SemiBold"/>
+                                   Foreground="White" FontSize="52" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Unit, ElementName=root}"
-                                   Foreground="#8A92A3" FontSize="16" Margin="2,6,0,0"/>
+                                   Foreground="#8A92A3" FontSize="18" Margin="3,8,0,0"
+                                   VerticalAlignment="Top"/>
                     </StackPanel>
                     <TextBlock Text="{Binding Caption, ElementName=root}"
-                               Foreground="#8A92A3" FontSize="14"
+                               Foreground="#B4BAC8" FontSize="14"
                                HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>
