@@ -48,7 +48,21 @@
                             Background="#10151A" BorderBrush="#1B2A25" BorderThickness="1"
                             CornerRadius="10" Padding="16,6">
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="6" Height="6" Fill="#33D17A" VerticalAlignment="Center"/>
+                            <Ellipse Width="6" Height="6" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="#33D17A"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HealthLabel}" Value="Fair">
+                                                <Setter Property="Fill" Value="#FFC93C"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding HealthLabel}" Value="Poor">
+                                                <Setter Property="Fill" Value="#FF5A1F"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
                             <TextBlock Text="{Binding HealthLabel}" Foreground="White" FontSize="13"
                                        Margin="8,0,0,0"/>
                         </StackPanel>
