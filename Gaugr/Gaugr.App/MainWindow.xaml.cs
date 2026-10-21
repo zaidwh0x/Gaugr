@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using Gaugr.App.ViewModels;
@@ -13,7 +13,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = new ShellViewModel(App.Hub, App.Settings);
+        DataContext = new ShellViewModel(App.Hub, App.Settings, App.Alerts);
         SourceInitialized += (_, _) => DarkenTitleBar();
     }
 
