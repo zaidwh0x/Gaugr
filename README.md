@@ -72,10 +72,14 @@ Gaugr/
 - [ ] Add configurable monitoring and alert settings
 - [ ] Improve release packaging and documentation
 
-## Contributing
+## Feedback
 
-Gaugr is being developed in the open as a personal software project. Bug reports, ideas, and constructive feedback are welcome. If you report a hardware-reading issue, include your Windows version and relevant hardware details.
+Bug reports, feature suggestions, and constructive feedback are welcome through GitHub Issues. Please include your Windows version and relevant hardware details when reporting a hardware-reading issue. Do not include private information in issue reports.
 
-## License
+## License and permitted use
 
-No license has been added yet. Until a license is included, all rights remain with the copyright holder and reuse is not automatically permitted.
+Gaugr is **proprietary software**, not an open-source-licensed project. The source is published for transparency and review. Under the [Gaugr Proprietary License](LICENSE), individuals may inspect, compile, and run Gaugr for personal, non-commercial use. Commercial use, redistribution, and broader reuse require prior written permission.
+
+Third-party libraries have their own licenses; see their respective projects and package notices. The Gaugr license does not override those licenses.
+
+For commercial licensing or other permissions, contact [@zaidwh0x](https://github.com/zaidwh0x).
