@@ -11,6 +11,7 @@ Gaugr brings your PC's hardware readings and performance history into one clean,
 - **Overview** — at-a-glance CPU and GPU temperatures, memory usage, and system-drive capacity.
 - **Performance** — live CPU, GPU, and RAM history charts with 60-second and 5-minute views.
 - **Hardware** — detected processor, graphics, memory, motherboard, clock, and fan information where available.
+- **Storage** — capacity, free space, and usage for every detected drive.
 - **Processes** — searchable process list with CPU and memory usage, sorting, and periodic refresh.
 - **Hardware monitoring** — sensor readings collected with LibreHardwareMonitor.
 
@@ -74,7 +75,7 @@ Gaugr/
 
 - [ ] Improve missing/unavailable sensor handling
 - [ ] Refine temperature chart scaling and metric presentation
-- [ ] Add a dedicated storage page for all detected drives
+- [x] Add a dedicated storage page for all detected drives
 - [ ] Add configurable monitoring and alert settings
 - [ ] Improve release packaging and documentation
 
