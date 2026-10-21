@@ -26,6 +26,7 @@ public partial class ShellViewModel : ObservableObject
     private readonly PerformanceViewModel _performance;
     private readonly HardwareViewModel _hardware;
     private readonly ProcessesViewModel _processes;
+    private readonly StorageViewModel _storage = new();
 
     [ObservableProperty] private object _currentPage;
 
@@ -53,6 +54,7 @@ public partial class ShellViewModel : ObservableObject
     private void Navigate(string name)
     {
         _processes.SetActive(name == "Processes");
+        if (name == "Storage") _storage.Refresh();
 
         foreach (var item in NavItems)
             item.IsSelected = item.Name == name;
@@ -63,6 +65,7 @@ public partial class ShellViewModel : ObservableObject
             "Performance" => _performance,
             "Hardware" => _hardware,
             "Processes" => _processes,
+            "Storage" => _storage,
             _ => new PlaceholderViewModel(name)
         };
     }
