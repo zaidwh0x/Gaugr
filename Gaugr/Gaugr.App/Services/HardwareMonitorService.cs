@@ -69,7 +69,12 @@ public sealed class HardwareMonitorService : IDisposable
                     break;
 
                 case HardwareType.Memory:
-                    ramPercent = Get(hw, SensorType.Load, "Memory");
+                    // With the PawnIO driver installed, individual DIMMs can also appear as Memory
+                    // hardware; only the total-memory entry has the "Memory" load sensor.
+                    var memoryLoad = GetOrNull(hw, SensorType.Load, "Memory");
+                    if (memoryLoad is null) break;
+
+                    ramPercent = memoryLoad.Value;
                     ramUsed = Get(hw, SensorType.Data, "Memory Used");
                     ramAvail = Get(hw, SensorType.Data, "Memory Available");
                     break;
