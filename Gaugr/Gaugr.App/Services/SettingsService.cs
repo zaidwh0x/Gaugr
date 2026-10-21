@@ -6,6 +6,8 @@ namespace Gaugr.App.Services;
 
 public enum TemperatureUnit { Celsius, Fahrenheit }
 
+public enum AlertMetric { CpuTemperature, GpuTemperature, Ram, Storage }
+
 /// <summary>User preferences, stored as JSON in %AppData%\Gaugr\settings.json.</summary>
 public sealed class SettingsService
 {
@@ -20,8 +22,12 @@ public sealed class SettingsService
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public TemperatureUnit TemperatureUnit { get; private set; } = TemperatureUnit.Celsius;
-    public double RefreshSeconds { get; private set; } = 1;
+    private SettingsData _data = new();
+
+    public TemperatureUnit TemperatureUnit => _data.TemperatureUnit;
+    public double RefreshSeconds => _data.RefreshSeconds;
+    public bool CloseToTray => _data.CloseToTray;
+    public bool AlertsEnabled => _data.AlertsEnabled;
 
     public string TemperatureLabel => TemperatureUnit == TemperatureUnit.Fahrenheit ? "°F" : "°C";
 
@@ -35,11 +41,7 @@ public sealed class SettingsService
             if (File.Exists(FilePath))
             {
                 var data = JsonSerializer.Deserialize<SettingsData>(File.ReadAllText(FilePath), JsonOptions);
-                if (data is not null)
-                {
-                    settings.TemperatureUnit = data.TemperatureUnit;
-                    if (RefreshChoices.Contains(data.RefreshSeconds)) settings.RefreshSeconds = data.RefreshSeconds;
-                }
+                if (data is not null) settings._data = Sanitize(data);
             }
         }
         catch { /* a missing or damaged settings file just means defaults */ }
@@ -50,31 +52,74 @@ public sealed class SettingsService
     public double ConvertTemperature(double celsius) =>
         TemperatureUnit == TemperatureUnit.Fahrenheit ? celsius * 9 / 5 + 32 : celsius;
 
-    public void SetTemperatureUnit(TemperatureUnit unit)
+    /// <summary>Alert limit for a metric: °C for temperatures, % for usage. 0 means the alert is off.</summary>
+    public int GetAlertLimit(AlertMetric metric) => metric switch
     {
-        if (unit == TemperatureUnit) return;
-        TemperatureUnit = unit;
-        SaveAndNotify();
-    }
+        AlertMetric.CpuTemperature => _data.CpuAlert,
+        AlertMetric.GpuTemperature => _data.GpuAlert,
+        AlertMetric.Ram => _data.RamAlert,
+        _ => _data.StorageAlert
+    };
+
+    public void SetTemperatureUnit(TemperatureUnit unit) => Update(d => d.TemperatureUnit = unit);
 
     public void SetRefreshSeconds(double seconds)
     {
-        if (!RefreshChoices.Contains(seconds) || seconds == RefreshSeconds) return;
-        RefreshSeconds = seconds;
-        SaveAndNotify();
+        if (RefreshChoices.Contains(seconds)) Update(d => d.RefreshSeconds = seconds);
     }
 
-    private void SaveAndNotify()
+    public void SetCloseToTray(bool value) => Update(d => d.CloseToTray = value);
+
+    public void SetAlertsEnabled(bool value) => Update(d => d.AlertsEnabled = value);
+
+    public void SetAlertLimit(AlertMetric metric, int limit) => Update(d =>
+    {
+        limit = Math.Clamp(limit, 0, 100);
+        switch (metric)
+        {
+            case AlertMetric.CpuTemperature: d.CpuAlert = limit; break;
+            case AlertMetric.GpuTemperature: d.GpuAlert = limit; break;
+            case AlertMetric.Ram: d.RamAlert = limit; break;
+            default: d.StorageAlert = limit; break;
+        }
+    });
+
+    private void Update(Action<SettingsData> change)
+    {
+        change(_data);
+        Save();
+        Changed?.Invoke();
+    }
+
+    private void Save()
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(new SettingsData(TemperatureUnit, RefreshSeconds), JsonOptions));
+            File.WriteAllText(FilePath, JsonSerializer.Serialize(_data, JsonOptions));
         }
         catch { /* the setting still applies for this session */ }
-
-        Changed?.Invoke();
     }
 
-    internal sealed record SettingsData(TemperatureUnit TemperatureUnit, double RefreshSeconds);
+    private static SettingsData Sanitize(SettingsData data)
+    {
+        if (!RefreshChoices.Contains(data.RefreshSeconds)) data.RefreshSeconds = 1;
+        data.CpuAlert = Math.Clamp(data.CpuAlert, 0, 100);
+        data.GpuAlert = Math.Clamp(data.GpuAlert, 0, 100);
+        data.RamAlert = Math.Clamp(data.RamAlert, 0, 100);
+        data.StorageAlert = Math.Clamp(data.StorageAlert, 0, 100);
+        return data;
+    }
+
+    internal sealed class SettingsData
+    {
+        public TemperatureUnit TemperatureUnit { get; set; } = TemperatureUnit.Celsius;
+        public double RefreshSeconds { get; set; } = 1;
+        public bool CloseToTray { get; set; }
+        public bool AlertsEnabled { get; set; } = true;
+        public int CpuAlert { get; set; } = 90;
+        public int GpuAlert { get; set; } = 90;
+        public int RamAlert { get; set; } = 95;
+        public int StorageAlert { get; set; }
+    }
 }

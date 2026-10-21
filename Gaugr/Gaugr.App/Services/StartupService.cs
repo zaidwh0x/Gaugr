@@ -69,6 +69,7 @@ public sealed class StartupService
               <Actions Context="Author">
                 <Exec>
                   <Command>{command}</Command>
+                  <Arguments>--minimized</Arguments>
                   <WorkingDirectory>{folder}</WorkingDirectory>
                 </Exec>
               </Actions>

@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Gaugr.App.Services;
 
@@ -28,6 +28,7 @@ public partial class ShellViewModel : ObservableObject
     private readonly ProcessesViewModel _processes;
     private readonly StorageViewModel _storage = new();
     private readonly SettingsService _settings;
+    private readonly AlertService _alerts;
     private SettingsViewModel? _settingsPage;
 
     [ObservableProperty] private object _currentPage;
@@ -42,9 +43,10 @@ public partial class ShellViewModel : ObservableObject
         new("Settings", ""),
     ];
 
-    public ShellViewModel(MonitorHub hub, SettingsService settings)
+    public ShellViewModel(MonitorHub hub, SettingsService settings, AlertService alerts)
     {
         _settings = settings;
+        _alerts = alerts;
         _overview = new OverviewViewModel(hub, settings, Navigate);
         _performance = new PerformanceViewModel(hub, settings);
         _hardware = new HardwareViewModel(hub);
@@ -61,7 +63,7 @@ public partial class ShellViewModel : ObservableObject
 
         if (name == "Settings")
         {
-            _settingsPage ??= new SettingsViewModel(_settings, new StartupService());
+            _settingsPage ??= new SettingsViewModel(_settings, new StartupService(), _alerts.SendTest);
             _settingsPage.Refresh();
         }
 
