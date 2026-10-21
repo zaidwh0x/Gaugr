@@ -79,21 +79,21 @@
 
             <UniformGrid Grid.Column="1" Rows="2" Columns="2">
                 <controls:MetricCard Title="CPU" Subtitle="{Binding CpuName}" Glyph="&#xE950;"
-                                     Value="{Binding CpuTemp}" Unit="°C" Caption="Temperature"
+                                     Value="{Binding CpuTemp}" ReadoutText="{Binding CpuReadout}" Unit="{Binding TemperatureLabel}" Caption="Temperature"
                                      IsAvailable="{Binding CpuAvailable}" UnavailableText="Install PawnIO"
                                      GaugeStart="#7FD8FF" GaugeEnd="#2F6BFF"
                                      ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Hardware"/>
                 <controls:MetricCard Title="GPU" Subtitle="{Binding GpuName}" Glyph="&#xE7F4;"
-                                     Value="{Binding GpuTemp}" Unit="°C" Caption="Temperature"
+                                     Value="{Binding GpuTemp}" ReadoutText="{Binding GpuReadout}" Unit="{Binding TemperatureLabel}" Caption="Temperature"
                                      IsAvailable="{Binding GpuAvailable}"
                                      GaugeStart="#7FD8FF" GaugeEnd="#2F6BFF"
                                      ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Hardware"/>
                 <controls:MetricCard Title="RAM" Subtitle="{Binding RamLabel}" Glyph="&#xE945;"
-                                     Value="{Binding RamPercent}" Unit="%" Caption="Utilization"
+                                     Value="{Binding RamPercent}" ReadoutText="{Binding RamReadout}" Unit="%" Caption="Utilization"
                                      GaugeStart="#FFD23C" GaugeEnd="#FF5A1F"
                                      ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Performance"/>
                 <controls:MetricCard Title="Storage" Subtitle="{Binding StorageLabel}" Glyph="&#xEDA2;"
-                                     Value="{Binding StoragePercent}" Unit="%" Caption="Utilization"
+                                     Value="{Binding StoragePercent}" ReadoutText="{Binding StorageReadout}" Unit="%" Caption="Utilization"
                                      GaugeStart="#FFD23C" GaugeEnd="#FF5A1F"
                                      ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Storage"/>
             </UniformGrid>

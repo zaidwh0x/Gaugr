@@ -27,6 +27,8 @@ public partial class MetricCard : UserControl
     public static readonly DependencyProperty GaugeEndProperty =
         DependencyProperty.Register(nameof(GaugeEnd), typeof(Color), typeof(MetricCard),
             new PropertyMetadata(Color.FromRgb(40, 110, 255)));
+    public static readonly DependencyProperty ReadoutTextProperty =
+        DependencyProperty.Register(nameof(ReadoutText), typeof(string), typeof(MetricCard), new PropertyMetadata("0"));
     public static readonly DependencyProperty IsAvailableProperty =
         DependencyProperty.Register(nameof(IsAvailable), typeof(bool), typeof(MetricCard), new PropertyMetadata(true));
     public static readonly DependencyProperty UnavailableTextProperty =
@@ -45,6 +47,8 @@ public partial class MetricCard : UserControl
     public double Value { get => (double)GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
     public Color GaugeStart { get => (Color)GetValue(GaugeStartProperty); set => SetValue(GaugeStartProperty, value); }
     public Color GaugeEnd { get => (Color)GetValue(GaugeEndProperty); set => SetValue(GaugeEndProperty, value); }
+    // the number shown in the middle; Value only drives the gauge fill
+    public string ReadoutText { get => (string)GetValue(ReadoutTextProperty); set => SetValue(ReadoutTextProperty, value); }
     public bool IsAvailable { get => (bool)GetValue(IsAvailableProperty); set => SetValue(IsAvailableProperty, value); }
     public string UnavailableText { get => (string)GetValue(UnavailableTextProperty); set => SetValue(UnavailableTextProperty, value); }
     public ICommand? ViewMoreCommand { get => (ICommand?)GetValue(ViewMoreCommandProperty); set => SetValue(ViewMoreCommandProperty, value); }

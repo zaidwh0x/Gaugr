@@ -12,6 +12,7 @@ Gaugr brings your PC's hardware readings and performance history into one clean,
 - **Performance** — live CPU, GPU, and RAM history charts with 60-second and 5-minute views.
 - **Hardware** — detected processor, graphics, memory, motherboard, clock, and fan information where available.
 - **Storage** — capacity, free space, and usage for every detected drive.
+- **Settings** — temperature unit (°C/°F), refresh rate, and starting Gaugr with Windows. Settings are saved in `%AppData%\Gaugr\settings.json`.
 - **Processes** — searchable process list with CPU and memory usage, sorting, and periodic refresh.
 - **Hardware monitoring** — sensor readings collected with LibreHardwareMonitor.
 

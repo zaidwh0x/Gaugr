@@ -9,6 +9,7 @@ namespace Gaugr.App.ViewModels;
 public partial class PerformanceViewModel : ObservableObject
 {
     private readonly MonitorHub _hub;
+    private readonly SettingsService _settings;
     private readonly ObservableCollection<double> _cpuLoad = new(), _cpuTemp = new(),
                                                   _gpuLoad = new(), _gpuTemp = new(),
                                                   _ramUsed = new();
@@ -19,9 +20,13 @@ public partial class PerformanceViewModel : ObservableObject
     public ChartModel Gpu { get; }
     public ChartModel Ram { get; }
 
-    public PerformanceViewModel(MonitorHub hub)
+    // How many samples fit in the chosen window at the current refresh rate
+    private int Samples => Math.Max(2, (int)Math.Round(WindowSeconds / _hub.IntervalSeconds));
+
+    public PerformanceViewModel(MonitorHub hub, SettingsService settings)
     {
         _hub = hub;
+        _settings = settings;
 
         var blue = new SKColor(40, 140, 255);
         var orange = new SKColor(255, 160, 40);
@@ -33,6 +38,11 @@ public partial class PerformanceViewModel : ObservableObject
 
         ApplyWindow();
         hub.Updated += OnUpdated;
+        hub.IntervalChanged += ApplyWindow;
+        settings.Changed += () =>
+        {
+            if (_hub.Latest is { } latest) UpdateSummaries(latest);
+        };
     }
 
     partial void OnWindowSecondsChanged(int value) => ApplyWindow();
@@ -42,7 +52,7 @@ public partial class PerformanceViewModel : ObservableObject
 
     private void ApplyWindow()
     {
-        foreach (var chart in new[] { Cpu, Gpu, Ram }) chart.SetWindow(WindowSeconds);
+        foreach (var chart in new[] { Cpu, Gpu, Ram }) chart.SetWindow(Samples);
 
         Refill(_cpuLoad, s => s.CpuLoad);
         Refill(_cpuTemp, s => s.CpuTemp);
@@ -57,7 +67,7 @@ public partial class PerformanceViewModel : ObservableObject
     private void Refill(ObservableCollection<double> target, Func<HardwareSnapshot, double> pick)
     {
         target.Clear();
-        foreach (var s in _hub.History.TakeLast(WindowSeconds)) target.Add(pick(s));
+        foreach (var s in _hub.History.TakeLast(Samples)) target.Add(pick(s));
     }
 
     private void OnUpdated(HardwareSnapshot s)
@@ -73,13 +83,15 @@ public partial class PerformanceViewModel : ObservableObject
     private void Push(ObservableCollection<double> list, double value)
     {
         list.Add(value);
-        while (list.Count > WindowSeconds) list.RemoveAt(0);
+        while (list.Count > Samples) list.RemoveAt(0);
     }
 
+    // Charts always plot temperature in °C; only the summary text follows the chosen unit
     private void UpdateSummaries(HardwareSnapshot s)
     {
-        Cpu.Summary = $"{s.CpuLoad:0}% usage  ·  {s.CpuTemp:0}°C";
-        Gpu.Summary = $"{s.GpuLoad:0}% usage  ·  {s.GpuTemp:0}°C";
+        var unit = _settings.TemperatureLabel;
+        Cpu.Summary = $"{s.CpuLoad:0}% usage  ·  {_settings.ConvertTemperature(s.CpuTemp):0}{unit}";
+        Gpu.Summary = $"{s.GpuLoad:0}% usage  ·  {_settings.ConvertTemperature(s.GpuTemp):0}{unit}";
         Ram.Summary = $"{s.RamPercent:0}%  ·  {s.RamLabel}";
     }
 }

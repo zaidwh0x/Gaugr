@@ -27,6 +27,8 @@ public partial class ShellViewModel : ObservableObject
     private readonly HardwareViewModel _hardware;
     private readonly ProcessesViewModel _processes;
     private readonly StorageViewModel _storage = new();
+    private readonly SettingsService _settings;
+    private SettingsViewModel? _settingsPage;
 
     [ObservableProperty] private object _currentPage;
 
@@ -40,10 +42,11 @@ public partial class ShellViewModel : ObservableObject
         new("Settings", ""),
     ];
 
-    public ShellViewModel(MonitorHub hub)
+    public ShellViewModel(MonitorHub hub, SettingsService settings)
     {
-        _overview = new OverviewViewModel(hub, Navigate);
-        _performance = new PerformanceViewModel(hub);
+        _settings = settings;
+        _overview = new OverviewViewModel(hub, settings, Navigate);
+        _performance = new PerformanceViewModel(hub, settings);
         _hardware = new HardwareViewModel(hub);
         _processes = new ProcessesViewModel();
         _currentPage = _overview;
@@ -56,6 +59,12 @@ public partial class ShellViewModel : ObservableObject
         _processes.SetActive(name == "Processes");
         if (name == "Storage") _storage.Refresh();
 
+        if (name == "Settings")
+        {
+            _settingsPage ??= new SettingsViewModel(_settings, new StartupService());
+            _settingsPage.Refresh();
+        }
+
         foreach (var item in NavItems)
             item.IsSelected = item.Name == name;
 
@@ -66,6 +75,7 @@ public partial class ShellViewModel : ObservableObject
             "Hardware" => _hardware,
             "Processes" => _processes,
             "Storage" => _storage,
+            "Settings" => _settingsPage!,
             _ => new PlaceholderViewModel(name)
         };
     }
