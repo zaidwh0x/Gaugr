@@ -4,7 +4,7 @@
              xmlns:controls="clr-namespace:Gaugr.App.Controls"
              x:Name="root">
     <UserControl.Resources>
-        <!-- the readout is replaced by a "--" placeholder when the sensor gives no value -->
+        <!-- the readout is replaced by a dash placeholder when the sensor gives no value -->
         <Style x:Key="WhenAvailable" TargetType="FrameworkElement">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsAvailable, RelativeSource={RelativeSource AncestorType=controls:MetricCard}}"
