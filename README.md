@@ -14,6 +14,8 @@ Gaugr brings your PC's hardware readings and performance history into one clean,
 - **Processes** — searchable process list with CPU and memory usage, sorting, and periodic refresh.
 - **Hardware monitoring** — sensor readings collected with LibreHardwareMonitor.
 
+Gaugr requests administrator rights on launch, because Windows only exposes CPU temperatures and fan speeds to elevated processes. When running from a terminal or Visual Studio, start that tool as administrator.
+
 Some readings depend on hardware, drivers, and sensor support. Gaugr does not yet expose every metric on every PC.
 
 ## Built with
