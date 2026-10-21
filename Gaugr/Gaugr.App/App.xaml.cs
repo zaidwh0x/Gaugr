@@ -5,7 +5,8 @@ namespace Gaugr.App;
 
 public partial class App : Application
 {
-    public static MonitorHub Hub { get; } = new();
+    public static SettingsService Settings { get; } = SettingsService.Load();
+    public static MonitorHub Hub { get; } = new(Settings);
 
     protected override void OnStartup(StartupEventArgs e)
     {

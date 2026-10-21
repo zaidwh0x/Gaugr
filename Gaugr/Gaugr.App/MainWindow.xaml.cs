@@ -13,7 +13,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = new ShellViewModel(App.Hub);
+        DataContext = new ShellViewModel(App.Hub, App.Settings);
         SourceInitialized += (_, _) => DarkenTitleBar();
     }
 

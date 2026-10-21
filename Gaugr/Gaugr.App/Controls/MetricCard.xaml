@@ -96,7 +96,7 @@
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,18,0,0">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
                                 Style="{StaticResource WhenAvailable}">
-                        <TextBlock Text="{Binding Value, ElementName=root, StringFormat={}{0:0}}"
+                        <TextBlock Text="{Binding ReadoutText, ElementName=root}"
                                    Foreground="White" FontSize="52" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Unit, ElementName=root}"
                                    Foreground="#8A92A3" FontSize="18" Margin="3,8,0,0"
