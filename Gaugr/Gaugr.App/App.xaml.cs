@@ -1,6 +1,7 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Windows;
 using Gaugr.App.Services;
+using Gaugr.App.ViewModels;
 
 namespace Gaugr.App;
 
@@ -12,6 +13,7 @@ public partial class App : Application
     public static AlertService Alerts { get; } = new(Hub, Settings, Tray);
 
     private MainWindow? _window;
+    private OverlayWindow? _overlay;
     private bool _exiting;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -22,6 +24,8 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         Tray.OpenRequested += ShowWindow;
         Tray.ExitRequested += Quit;
+        Tray.OverlayToggleRequested += () => Settings.SetOverlayEnabled(!Settings.OverlayEnabled);
+        Settings.Changed += ApplyOverlay;
 
         Hub.Start();
 
@@ -30,6 +34,24 @@ public partial class App : Application
 
         // "Start with Windows" launches with --minimized so Gaugr waits in the tray
         if (!e.Args.Contains("--minimized")) _window.Show();
+
+        ApplyOverlay();
+    }
+
+    // Shows or hides the compact overlay to match the setting (from Settings or the tray menu)
+    private void ApplyOverlay()
+    {
+        if (Settings.OverlayEnabled)
+        {
+            _overlay ??= new OverlayWindow(new OverlayViewModel(Hub, Settings), Settings);
+            if (!_overlay.IsVisible) _overlay.Show();
+        }
+        else
+        {
+            _overlay?.Hide();
+        }
+
+        Tray.SetOverlayChecked(Settings.OverlayEnabled);
     }
 
     private void ShowWindow()
