@@ -1,0 +1,4217 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.github/
+  workflows/
+    build.yml
+    windows-release.yml
+Gaugr/
+  Gaugr.App/
+    Assets/
+      Gaugr.ico
+    Controls/
+      MetricCard.xaml
+      MetricCard.xaml.cs
+      TickGauge.cs
+      VerticalMeter.cs
+    Services/
+      AlertService.cs
+      HardwareMonitorService.cs
+      MonitorHub.cs
+      ProcessSampler.cs
+      SettingsService.cs
+      StartupService.cs
+      StaticHardwareInfo.cs
+      TrayService.cs
+    ViewModels/
+      ChartModel.cs
+      HardwareViewModel.cs
+      OverlayViewModel.cs
+      OverviewViewModel.cs
+      PerformanceViewModel.cs
+      ProcessesViewModel.cs
+      SettingsViewModel.cs
+      ShellViewModel.cs
+      StorageViewModel.cs
+    Views/
+      HardwareView.xaml
+      HardwareView.xaml.cs
+      OverviewView.xaml
+      OverviewView.xaml.cs
+      PerformanceView.xaml
+      PerformanceView.xaml.cs
+      PlaceholderView.xaml
+      PlaceholderView.xaml.cs
+      ProcessesView.xaml
+      ProcessesView.xaml.cs
+      SettingsView.xaml
+      SettingsView.xaml.cs
+      StorageView.xaml
+      StorageView.xaml.cs
+    app.manifest
+    App.xaml
+    App.xaml.cs
+    AssemblyInfo.cs
+    Gaugr.App.csproj
+    MainWindow.xaml
+    MainWindow.xaml.cs
+    OverlayWindow.xaml
+    OverlayWindow.xaml.cs
+  Gaugr.slnx
+installer/
+  Gaugr.iss
+.gitattributes
+.gitignore
+LICENSE
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".github/workflows/build.yml">
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build Gaugr/Gaugr.App/Gaugr.App.csproj --configuration Release
+</file>
+
+<file path="Gaugr/Gaugr.App/Controls/VerticalMeter.cs">
+using System.Windows;
+using System.Windows.Media;
+
+namespace Gaugr.App.Controls;
+
+/// <summary>Tall rounded bar with a tick scale beside it, used for the health score.</summary>
+public class VerticalMeter : FrameworkElement
+{
+    private static readonly Color Top = Color.FromRgb(45, 230, 205);
+    private static readonly Color Bottom = Color.FromRgb(255, 100, 30);
+
+    public static readonly DependencyProperty ValueProperty =
+        DependencyProperty.Register(nameof(Value), typeof(double), typeof(VerticalMeter),
+            new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public double Value
+    {
+        get => (double)GetValue(ValueProperty);
+        set => SetValue(ValueProperty, value);   // 0-100
+    }
+
+    protected override void OnRender(DrawingContext dc)
+    {
+        const double barWidth = 28;
+        double height = ActualHeight;
+        if (height <= 0) return;
+
+        double fraction = Math.Clamp(Value, 0, 100) / 100;
+        double fillHeight = height * fraction;
+        double top = height - fillHeight;
+
+        var track = new SolidColorBrush(Color.FromRgb(26, 28, 35));
+        dc.DrawRoundedRectangle(track, null, new Rect(0, 0, barWidth, height), barWidth / 2, barWidth / 2);
+
+        if (fillHeight > 1)
+        {
+            var fill = new LinearGradientBrush(Top, Bottom, 90);
+            double radius = Math.Min(barWidth / 2, fillHeight / 2);
+            dc.DrawRoundedRectangle(fill, null, new Rect(0, top, barWidth, fillHeight), radius, radius);
+        }
+
+        const int steps = 24;
+        var unlit = new Pen(new SolidColorBrush(Color.FromRgb(42, 45, 54)), 1.5);
+        for (int i = 0; i <= steps; i++)
+        {
+            double y = Math.Clamp(height * i / steps, 1, height - 1);
+            bool major = i % 4 == 0;
+            double length = major ? 14 : 8;
+            double x = barWidth + 16;
+
+            var pen = y >= top
+                ? new Pen(new SolidColorBrush(Lerp(Top, Bottom, y / height)), 1.5)
+                : unlit;
+            dc.DrawLine(pen, new Point(x, y), new Point(x + length, y));
+        }
+    }
+
+    private static Color Lerp(Color a, Color b, double t) => Color.FromRgb(
+        (byte)(a.R + (b.R - a.R) * t),
+        (byte)(a.G + (b.G - a.G) * t),
+        (byte)(a.B + (b.B - a.B) * t));
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Services/AlertService.cs">
+namespace Gaugr.App.Services;
+
+/// <summary>
+/// Raises a tray notification when a reading crosses its limit. Each alert fires once, and is
+/// armed again only after the reading has dropped a few points below the limit.
+/// </summary>
+public sealed class AlertService
+{
+    private const double RearmMargin = 3;
+
+    private readonly SettingsService _settings;
+    private readonly TrayService _tray;
+    private readonly HashSet<AlertMetric> _active = new();
+
+    public AlertService(MonitorHub hub, SettingsService settings, TrayService tray)
+    {
+        _settings = settings;
+        _tray = tray;
+        hub.Updated += Check;
+    }
+
+    public void SendTest() => _tray.Notify("Gaugr alerts are working", "You will see a message like this when a limit is crossed.");
+
+    private void Check(HardwareSnapshot s)
+    {
+        if (!_settings.AlertsEnabled)
+        {
+            _active.Clear();
+            return;
+        }
+
+        Evaluate(AlertMetric.CpuTemperature, "CPU temperature", s.CpuTemp, "°C");
+        Evaluate(AlertMetric.GpuTemperature, "GPU temperature", s.GpuTemp, "°C");
+        Evaluate(AlertMetric.Ram, "Memory usage", s.RamPercent, "%");
+        Evaluate(AlertMetric.Storage, "Storage usage", s.StoragePercent, "%");
+    }
+
+    private void Evaluate(AlertMetric metric, string label, double value, string unit)
+    {
+        int limit = _settings.GetAlertLimit(metric);
+
+        // off, or no reading (a temperature of 0 means the sensor returned nothing)
+        if (limit <= 0 || value <= 0)
+        {
+            _active.Remove(metric);
+            return;
+        }
+
+        if (value >= limit)
+        {
+            if (_active.Add(metric))
+                _tray.Notify($"{label} is high", $"{value:0}{unit} (your limit is {limit}{unit})");
+        }
+        else if (value < limit - RearmMargin)
+        {
+            _active.Remove(metric);
+        }
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Services/ProcessSampler.cs">
+using System.Diagnostics;
+
+namespace Gaugr.App.Services;
+
+public record ProcessInfo(string Name, int Count, double Cpu, double MemoryMb)
+{
+    public string CpuText => $"{Cpu:0.0}%";
+    public string MemoryText => MemoryMb >= 1024 ? $"{MemoryMb / 1024:0.0} GB" : $"{MemoryMb:0} MB";
+    public bool CpuHigh => Cpu >= 50;
+    public bool MemoryHigh => MemoryMb >= 2048;
+}
+
+public sealed class ProcessSampler
+{
+    private Dictionary<int, (TimeSpan Cpu, DateTime Time)> _previous = new();
+    private readonly int _cores = Environment.ProcessorCount;
+
+    public List<ProcessInfo> Sample()
+    {
+        var now = DateTime.UtcNow;
+        var current = new Dictionary<int, (TimeSpan Cpu, DateTime Time)>();
+        var groups = new Dictionary<string, (int Count, double Cpu, double Mem)>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var p in Process.GetProcesses())
+        {
+            using (p)
+            {
+                if (p.Id == 0) continue;   // the "Idle" pseudo-process
+
+                string name;
+                try { name = p.ProcessName; } catch { continue; }
+
+                double mem = 0;
+                try { mem = p.WorkingSet64 / 1_048_576.0; } catch { }
+
+                // CPU % = how much processor time was used since the last sample
+                double cpu = 0;
+                try
+                {
+                    var total = p.TotalProcessorTime;
+                    current[p.Id] = (total, now);
+
+                    if (_previous.TryGetValue(p.Id, out var prev) && (now - prev.Time).TotalSeconds < 10)
+                    {
+                        var elapsedMs = (now - prev.Time).TotalMilliseconds;
+                        if (elapsedMs > 0)
+                            cpu = (total - prev.Cpu).TotalMilliseconds / elapsedMs / _cores * 100;
+                    }
+                }
+                catch { /* some system processes refuse access */ }
+
+                groups.TryGetValue(name, out var g);
+                groups[name] = (g.Count + 1, g.Cpu + Math.Max(cpu, 0), g.Mem + mem);
+            }
+        }
+
+        _previous = current;
+        return groups.Select(kv => new ProcessInfo(kv.Key, kv.Value.Count, kv.Value.Cpu, kv.Value.Mem)).ToList();
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Services/StaticHardwareInfo.cs">
+using System.Management;
+
+namespace Gaugr.App.Services;
+
+// Details that never change while the app runs, read once from Windows (WMI)
+public record StaticHardwareInfo(
+    string? CpuName, int Cores, int Threads, double? CpuBaseMhz,
+    string? RamTotal, string? RamType, string? RamSpeed, string? RamModules,
+    string? BoardMaker, string? BoardModel, string? BiosVersion)
+{
+    public static StaticHardwareInfo Load()
+    {
+        var cpu = Query("Win32_Processor", "Name", "NumberOfCores", "NumberOfLogicalProcessors", "MaxClockSpeed").FirstOrDefault();
+        var mem = Query("Win32_PhysicalMemory", "Capacity", "ConfiguredClockSpeed", "Speed", "SMBIOSMemoryType");
+        var board = Query("Win32_BaseBoard", "Manufacturer", "Product").FirstOrDefault();
+        var bios = Query("Win32_BIOS", "SMBIOSBIOSVersion").FirstOrDefault();
+
+        var caps = mem.Select(m => (Num(m["Capacity"]) ?? 0) / 1_073_741_824.0).Where(c => c > 0).ToList();
+        double? speed = mem.Select(m => Num(m["ConfiguredClockSpeed"]) ?? Num(m["Speed"])).FirstOrDefault(v => v > 0);
+        int? memType = (int?)Num(mem.FirstOrDefault()?["SMBIOSMemoryType"]);
+
+        string? modules = caps.Count == 0 ? null
+            : caps.Distinct().Count() == 1 ? $"{caps.Count} × {caps[0]:0} GB"
+            : $"{caps.Count} modules";
+
+        return new StaticHardwareInfo(
+            Str(cpu?["Name"]),
+            (int)(Num(cpu?["NumberOfCores"]) ?? 0),
+            (int)(Num(cpu?["NumberOfLogicalProcessors"]) ?? Environment.ProcessorCount),
+            Num(cpu?["MaxClockSpeed"]),
+            caps.Count > 0 ? $"{caps.Sum():0} GB" : null,
+            MemType(memType),
+            speed is > 0 ? $"{speed:0} MT/s" : null,
+            modules,
+            Str(board?["Manufacturer"]),
+            Str(board?["Product"]),
+            Str(bios?["SMBIOSBIOSVersion"]));
+    }
+
+    private static List<Dictionary<string, object?>> Query(string className, params string[] props)
+    {
+        var rows = new List<Dictionary<string, object?>>();
+        try
+        {
+            using var searcher = new ManagementObjectSearcher($"SELECT {string.Join(",", props)} FROM {className}");
+            foreach (ManagementObject mo in searcher.Get())
+            {
+                using (mo)
+                {
+                    var row = new Dictionary<string, object?>();
+                    foreach (var p in props) row[p] = mo[p];
+                    rows.Add(row);
+                }
+            }
+        }
+        catch { /* if Windows refuses, we just show fewer rows */ }
+        return rows;
+    }
+
+    private static string? Str(object? o) => o?.ToString()?.Trim();
+    private static double? Num(object? o) => o is null ? null : Convert.ToDouble(o);
+
+    private static string? MemType(int? t) => t switch
+    {
+        20 => "DDR",
+        21 => "DDR2",
+        24 => "DDR3",
+        26 => "DDR4",
+        34 => "DDR5",
+        _ => null
+    };
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/ViewModels/ChartModel.cs">
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Painting;
+using SkiaSharp;
+
+namespace Gaugr.App.ViewModels;
+
+public partial class ChartModel : ObservableObject
+{
+    private static readonly SKColor Muted = new(138, 146, 163);
+    private static readonly SKColor GridColor = new(30, 35, 45);
+
+    [ObservableProperty] private string _summary = "";
+
+    public LineSeries<double>[] Series { get; }
+    public Axis[] XAxes { get; }
+    public Axis[] YAxes { get; }
+
+    public ChartModel(params (ObservableCollection<double> Values, SKColor Color)[] lines)
+    {
+        Series = lines.Select(l => new LineSeries<double>
+        {
+            Values = l.Values,
+            Stroke = new SolidColorPaint(l.Color) { StrokeThickness = 2 },
+            Fill = new SolidColorPaint(l.Color.WithAlpha(35)),
+            GeometrySize = 0,
+            GeometryFill = null,
+            GeometryStroke = null,
+            LineSmoothness = 0
+        }).ToArray();
+
+        XAxes = new[] { new Axis { IsVisible = false, MinLimit = 0 } };
+        YAxes = new[]
+        {
+            new Axis
+            {
+                MinLimit = 0,
+                MaxLimit = 100,
+                MinStep = 25,
+                ForceStepToMin = true,
+                TextSize = 12,
+                LabelsPaint = new SolidColorPaint(Muted),
+                SeparatorsPaint = new SolidColorPaint(GridColor) { StrokeThickness = 1 }
+            }
+        };
+    }
+
+    public void SetWindow(int samples) => XAxes[0].MaxLimit = samples - 1;
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/ViewModels/HardwareViewModel.cs">
+using CommunityToolkit.Mvvm.ComponentModel;
+using Gaugr.App.Services;
+
+namespace Gaugr.App.ViewModels;
+
+public record HardwareRow(string Label, string Value);
+
+public partial class HardwareSection : ObservableObject
+{
+    public string Title { get; }
+
+    [ObservableProperty] private IReadOnlyList<HardwareRow> _rows = Array.Empty<HardwareRow>();
+    [ObservableProperty] private bool _hasRows;
+
+    public HardwareSection(string title) => Title = title;
+
+    partial void OnRowsChanged(IReadOnlyList<HardwareRow> value) => HasRows = value.Count > 0;
+}
+
+public partial class HardwareViewModel : ObservableObject
+{
+    private readonly MonitorHub _hub;
+    private StaticHardwareInfo? _static;
+
+    public HardwareSection Cpu { get; } = new("Processor");
+    public HardwareSection Gpu { get; } = new("Graphics");
+    public HardwareSection Memory { get; } = new("Memory");
+    public HardwareSection Board { get; } = new("Motherboard");
+    public HardwareSection Fans { get; } = new("Fans");
+
+    public IReadOnlyList<HardwareSection> Sections { get; }
+
+    public HardwareViewModel(MonitorHub hub)
+    {
+        _hub = hub;
+        Sections = new[] { Cpu, Gpu, Memory, Board, Fans };
+
+        hub.Updated += _ => Rebuild();
+        _ = LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _static = await Task.Run(StaticHardwareInfo.Load);
+        Rebuild();
+    }
+
+    private void Rebuild()
+    {
+        var st = _static;
+        var s = _hub.Latest;
+
+        // Processor
+        var cpu = new List<HardwareRow>();
+        Add(cpu, "Processor", st?.CpuName ?? s?.CpuName);
+        if (st is { Cores: > 0 }) Add(cpu, "Cores / threads", $"{st.Cores} cores · {st.Threads} threads");
+        if (st?.CpuBaseMhz is double baseMhz and > 0) Add(cpu, "Base clock", Ghz(baseMhz));
+        if (s?.CpuClockMhz is double clock) Add(cpu, "Current clock", Ghz(clock));
+        Cpu.Rows = cpu;
+
+        // Graphics
+        var gpu = new List<HardwareRow>();
+        if (s is not null && s.GpuName != "GPU") Add(gpu, "Graphics card", s.GpuName);
+        if (s?.VramTotalMb is double total and > 0)
+        {
+            string vram = s.VramUsedMb is double used
+                ? $"{used / 1024:0.0} / {total / 1024:0.0} GB"
+                : $"{total / 1024:0.0} GB";
+            Add(gpu, "Video memory", vram);
+        }
+        if (s?.GpuCoreClockMhz is double core) Add(gpu, "Core clock", $"{core:0} MHz");
+        if (s?.GpuMemoryClockMhz is double mem) Add(gpu, "Memory clock", $"{mem:0} MHz");
+        Gpu.Rows = gpu;
+
+        // Memory
+        var ram = new List<HardwareRow>();
+        Add(ram, "Total", st?.RamTotal);
+        Add(ram, "Type", st?.RamType);
+        Add(ram, "Speed", st?.RamSpeed);
+        Add(ram, "Modules", st?.RamModules);
+        Memory.Rows = ram;
+
+        // Motherboard
+        var board = new List<HardwareRow>();
+        Add(board, "Manufacturer", st?.BoardMaker);
+        Add(board, "Model", st?.BoardModel);
+        Add(board, "BIOS version", st?.BiosVersion);
+        Board.Rows = board;
+
+        // Fans (only those that report a speed)
+        var fans = new List<HardwareRow>();
+        if (s is not null)
+            foreach (var f in s.Fans) fans.Add(new HardwareRow(f.Name, $"{f.Rpm:0} RPM"));
+        Fans.Rows = fans;
+    }
+
+    private static void Add(List<HardwareRow> rows, string label, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value)) rows.Add(new HardwareRow(label, value));
+    }
+
+    private static string Ghz(double mhz) => $"{mhz / 1000:0.00} GHz";
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/ViewModels/OverlayViewModel.cs">
+using CommunityToolkit.Mvvm.ComponentModel;
+using Gaugr.App.Services;
+
+namespace Gaugr.App.ViewModels;
+
+public partial class OverlayViewModel : ObservableObject
+{
+    private readonly SettingsService _settings;
+
+    [ObservableProperty] private string _cpuValue = "--";
+    [ObservableProperty] private string _gpuValue = "--";
+    [ObservableProperty] private string _ramValue = "--";
+
+    public OverlayViewModel(MonitorHub hub, SettingsService settings)
+    {
+        _settings = settings;
+
+        hub.Updated += Apply;
+        settings.Changed += () =>
+        {
+            if (hub.Latest is { } latest) Apply(latest);
+        };
+        if (hub.Latest is { } s) Apply(s);
+    }
+
+    private void Apply(HardwareSnapshot s)
+    {
+        CpuValue = Format(s.CpuTemp, s.CpuLoad);
+        GpuValue = Format(s.GpuTemp, s.GpuLoad);
+        RamValue = $"{s.RamPercent:0}%";
+    }
+
+    // a temperature of 0 means the sensor returned nothing, so only the load is shown
+    private string Format(double celsius, double load) => celsius > 0
+        ? $"{_settings.ConvertTemperature(celsius):0}{_settings.TemperatureLabel}  ·  {load:0}%"
+        : $"{load:0}%";
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/ViewModels/ProcessesViewModel.cs">
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Gaugr.App.Services;
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Windows.Threading;
+
+namespace Gaugr.App.ViewModels;
+
+public partial class ProcessesViewModel : ObservableObject
+{
+    private readonly ProcessSampler _sampler = new();
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private List<ProcessInfo> _all = new();
+    private bool _busy;
+
+    [ObservableProperty] private string _search = "";
+    [ObservableProperty] private string _sortBy = "Memory";   // Name / CPU / Memory
+    [ObservableProperty] private string _summary = "";
+
+    public ObservableCollection<ProcessInfo> Processes { get; } = new();
+
+    public ProcessesViewModel()
+    {
+        _timer.Tick += async (_, _) => await RefreshAsync();
+    }
+
+    // Only sample while the Processes page is on screen
+    public void SetActive(bool active)
+    {
+        if (active)
+        {
+            _timer.Start();
+            _ = RefreshAsync();
+        }
+        else
+        {
+            _timer.Stop();
+        }
+    }
+
+    partial void OnSearchChanged(string value) => Apply();
+    partial void OnSortByChanged(string value) => Apply();
+
+    [RelayCommand]
+    private void SetSort(string by) => SortBy = by;
+
+    private async Task RefreshAsync()
+    {
+        if (_busy) return;
+        _busy = true;
+        try
+        {
+            _all = await Task.Run(_sampler.Sample);   // heavy work off the UI thread
+            Apply();
+        }
+        finally { _busy = false; }
+    }
+
+    private void Apply()
+    {
+        IEnumerable<ProcessInfo> items = _all;
+
+        var text = Search.Trim();
+        if (text.Length > 0)
+            items = items.Where(p => p.Name.Contains(text, StringComparison.OrdinalIgnoreCase));
+
+        items = SortBy switch
+        {
+            "Name" => items.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase),
+            "CPU" => items.OrderByDescending(p => p.Cpu),
+            _ => items.OrderByDescending(p => p.MemoryMb)
+        };
+
+        var list = items.ToList();
+        Sync(list);
+        Summary = $"{list.Count} apps  ·  {list.Sum(p => p.MemoryMb) / 1024:0.0} GB of memory";
+    }
+
+    // Updates rows in place so the list doesn't jump back to the top every 2 seconds
+    private void Sync(List<ProcessInfo> items)
+    {
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (i < Processes.Count) Processes[i] = items[i];
+            else Processes.Add(items[i]);
+        }
+        while (Processes.Count > items.Count)
+            Processes.RemoveAt(Processes.Count - 1);
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/ViewModels/StorageViewModel.cs">
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace Gaugr.App.ViewModels;
+
+public sealed class DriveItem
+{
+    private static readonly Brush Healthy = Frozen(79, 195, 255);
+    private static readonly Brush Busy = Frozen(255, 210, 60);
+    private static readonly Brush Critical = Frozen(255, 90, 31);
+
+    public DriveItem(string name, string label, string format, string kind, double totalBytes, double freeBytes)
+    {
+        UsedPercent = totalBytes > 0 ? (totalBytes - freeBytes) / totalBytes * 100 : 0;
+
+        Title = string.IsNullOrWhiteSpace(label) ? name : $"{name}  {label}";
+        Detail = $"{FormatSize(freeBytes)} free of {FormatSize(totalBytes)}  ·  {format}  ·  {kind}";
+        UsageBrush = UsedPercent >= 90 ? Critical : UsedPercent >= 75 ? Busy : Healthy;
+        StatusText = UsedPercent >= 90 ? "Almost full. Free up some space to keep Windows running smoothly." : "";
+    }
+
+    public string Title { get; }
+    public string Detail { get; }
+    public string StatusText { get; }
+    public double UsedPercent { get; }
+    public Brush UsageBrush { get; }
+
+    private static string FormatSize(double bytes)
+    {
+        double gb = bytes / 1_073_741_824.0;
+        return gb >= 1024 ? $"{gb / 1024:0.##} TB" : $"{gb:0} GB";
+    }
+
+    private static SolidColorBrush Frozen(byte r, byte g, byte b)
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        brush.Freeze();
+        return brush;
+    }
+}
+
+public partial class StorageViewModel : ObservableObject
+{
+    public ObservableCollection<DriveItem> Drives { get; } = new();
+
+    public StorageViewModel() => Refresh();
+
+    public void Refresh()
+    {
+        Drives.Clear();
+
+        foreach (var drive in DriveInfo.GetDrives())
+        {
+            if (drive.DriveType is not (DriveType.Fixed or DriveType.Removable)) continue;
+
+            try
+            {
+                if (!drive.IsReady) continue;
+
+                Drives.Add(new DriveItem(
+                    drive.Name.TrimEnd('\\'),
+                    drive.VolumeLabel,
+                    drive.DriveFormat,
+                    drive.DriveType == DriveType.Removable ? "Removable" : "Local disk",
+                    drive.TotalSize,
+                    drive.AvailableFreeSpace));
+            }
+            catch (IOException) { /* drive disappeared or is not accessible */ }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/HardwareView.xaml">
+<UserControl x:Class="Gaugr.App.Views.HardwareView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- dark, slim scrollbar -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" IsTabStop="False"/>
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" IsTabStop="False"/>
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="#2A3140" CornerRadius="4" Margin="2,0"/>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="8,0,8,12">
+            <TextBlock Text="Hardware" Foreground="White" FontSize="32" FontWeight="SemiBold"/>
+            <TextBlock Text="Only the details your PC actually reports are shown"
+                       Foreground="#8A92A3" FontSize="15"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Sections}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Width="430" Margin="8" Padding="22"
+                                Background="#12151C" BorderBrush="#1E232D" BorderThickness="1"
+                                CornerRadius="16"
+                                Visibility="{Binding HasRows, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" Foreground="White" FontSize="20"
+                                           FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                <ItemsControl ItemsSource="{Binding Rows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,5">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="140"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding Label}" Foreground="#8A92A3" FontSize="14"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="White"
+                                                           FontSize="14" TextWrapping="Wrap"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/HardwareView.xaml.cs">
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+
+namespace Gaugr.App.Views
+{
+    /// <summary>
+    /// Interaction logic for HardwareView.xaml
+    /// </summary>
+    public partial class HardwareView : UserControl
+    {
+        public HardwareView()
+        {
+            InitializeComponent();
+        }
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/OverviewView.xaml.cs">
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+
+namespace Gaugr.App.Views
+{
+    /// <summary>
+    /// Interaction logic for OverviewView.xaml
+    /// </summary>
+    public partial class OverviewView : UserControl
+    {
+        public OverviewView()
+        {
+            InitializeComponent();
+        }
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/PerformanceView.xaml.cs">
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+
+namespace Gaugr.App.Views
+{
+    /// <summary>
+    /// Interaction logic for PerformanceView.xaml
+    /// </summary>
+    public partial class PerformanceView : UserControl
+    {
+        public PerformanceView()
+        {
+            InitializeComponent();
+        }
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/PlaceholderView.xaml">
+<UserControl x:Class="Gaugr.App.Views.PlaceholderView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+        <TextBlock Text="{Binding Title}" Foreground="White" FontSize="32"
+                   FontWeight="SemiBold" HorizontalAlignment="Center"/>
+        <TextBlock Text="Coming soon" Foreground="#8A92A3" FontSize="15"
+                   HorizontalAlignment="Center" Margin="0,6,0,0"/>
+    </StackPanel>
+</UserControl>
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/PlaceholderView.xaml.cs">
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+
+namespace Gaugr.App.Views
+{
+    /// <summary>
+    /// Interaction logic for PlaceholderView.xaml
+    /// </summary>
+    public partial class PlaceholderView : UserControl
+    {
+        public PlaceholderView()
+        {
+            InitializeComponent();
+        }
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/ProcessesView.xaml">
+<UserControl x:Class="Gaugr.App.Views.ProcessesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="PillButton" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#8A92A3"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" CornerRadius="8" Padding="12,7" Background="#12151C">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#161A23"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#1C2230"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SearchBox" TargetType="TextBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="#12151C" BorderBrush="#1E232D" BorderThickness="1"
+                                CornerRadius="10" Padding="12,8">
+                            <ScrollViewer x:Name="PART_ContentHost"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- dark, slim scrollbar -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" IsTabStop="False"/>
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" IsTabStop="False"/>
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="#2A3140" CornerRadius="4" Margin="2,0"/>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="8,0,8,12">
+            <TextBlock Text="Processes" Foreground="White" FontSize="32" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding Summary}" Foreground="#8A92A3" FontSize="15"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="8,0,8,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid>
+                <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}"
+                         Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="Search processes…" Foreground="#5B6373" FontSize="14"
+                           Margin="14,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Sort by" Foreground="#8A92A3" FontSize="13"
+                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <RadioButton Content="Name" GroupName="sort" Style="{StaticResource PillButton}"
+                             Command="{Binding SetSortCommand}" CommandParameter="Name"/>
+                <RadioButton Content="CPU" GroupName="sort" Style="{StaticResource PillButton}"
+                             Command="{Binding SetSortCommand}" CommandParameter="CPU"/>
+                <RadioButton Content="Memory" GroupName="sort" IsChecked="True"
+                             Style="{StaticResource PillButton}"
+                             Command="{Binding SetSortCommand}" CommandParameter="Memory"/>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="2" Background="#12151C" BorderBrush="#1E232D" BorderThickness="1"
+                CornerRadius="16" Padding="12" Margin="8,0,8,8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Margin="12,4,22,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="100"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="NAME" Foreground="#5B6373" FontSize="11" FontWeight="SemiBold"/>
+                    <TextBlock Grid.Column="1" Text="INSTANCES" Foreground="#5B6373" FontSize="11"
+                               FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                    <TextBlock Grid.Column="2" Text="CPU" Foreground="#5B6373" FontSize="11"
+                               FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                    <TextBlock Grid.Column="3" Text="MEMORY" Foreground="#5B6373" FontSize="11"
+                               FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                </Grid>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding Processes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="12,8" Margin="0,1" CornerRadius="8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="90"/>
+                                            <ColumnDefinition Width="90"/>
+                                            <ColumnDefinition Width="100"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Text="{Binding Name}" Foreground="White" FontSize="14"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Count}" Foreground="#8A92A3"
+                                                   FontSize="14" HorizontalAlignment="Right"/>
+
+                                        <TextBlock Grid.Column="2" Text="{Binding CpuText}" FontSize="14"
+                                                   HorizontalAlignment="Right">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CpuHigh}" Value="True">
+                                                            <Setter Property="Foreground" Value="#FFA028"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <TextBlock Grid.Column="3" Text="{Binding MemoryText}" FontSize="14"
+                                                   HorizontalAlignment="Right">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding MemoryHigh}" Value="True">
+                                                            <Setter Property="Foreground" Value="#FFA028"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/ProcessesView.xaml.cs">
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+
+namespace Gaugr.App.Views
+{
+    /// <summary>
+    /// Interaction logic for ProcessesView.xaml
+    /// </summary>
+    public partial class ProcessesView : UserControl
+    {
+        public ProcessesView()
+        {
+            InitializeComponent();
+        }
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/SettingsView.xaml.cs">
+using System.Windows.Controls;
+
+namespace Gaugr.App.Views;
+
+public partial class SettingsView : UserControl
+{
+    public SettingsView() => InitializeComponent();
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/StorageView.xaml">
+<UserControl x:Class="Gaugr.App.Views.StorageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <!-- dark, slim scrollbar -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" IsTabStop="False"/>
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" IsTabStop="False"/>
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="#2A3140" CornerRadius="4" Margin="2,0"/>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DriveBar" TargetType="ProgressBar">
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border Background="#1A1D25" CornerRadius="5"/>
+                            <Border x:Name="PART_Track">
+                                <Border x:Name="PART_Indicator" HorizontalAlignment="Left"
+                                        Background="{TemplateBinding Foreground}" CornerRadius="5"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="8,0,8,18">
+            <TextBlock Text="Storage" Foreground="White" FontSize="14"/>
+            <TextBlock Text="Your drives" Foreground="White" FontSize="38" FontWeight="Light"
+                       Margin="0,22,0,0"/>
+            <TextBlock Text="Capacity and free space on every disk Windows can see"
+                       Foreground="#8A92A3" FontSize="15" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Drives}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="8,0,8,14" Padding="26,22" CornerRadius="22"
+                                BorderBrush="#1C2028" BorderThickness="1">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#13151C" Offset="0"/>
+                                    <GradientStop Color="#0C0E13" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Width="50" Height="50" CornerRadius="14" VerticalAlignment="Top"
+                                        Background="#171A22" BorderBrush="#232733" BorderThickness="1">
+                                    <TextBlock Text="&#xEDA2;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="22" Foreground="White"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+
+                                <StackPanel Grid.Column="1" Margin="20,0,24,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" Foreground="White" FontSize="22"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Detail}" Foreground="#8A92A3" FontSize="14"
+                                               Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                    <ProgressBar Style="{StaticResource DriveBar}" Margin="0,16,0,0"
+                                                 Value="{Binding UsedPercent, Mode=OneWay}"
+                                                 Foreground="{Binding UsageBrush}"/>
+                                    <TextBlock Text="{Binding StatusText}" Foreground="#FF8A5C" FontSize="13"
+                                               Margin="0,10,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding UsedPercent, StringFormat={}{0:0}%}"
+                                               Foreground="White" FontSize="40" FontWeight="SemiBold"
+                                               HorizontalAlignment="Right"/>
+                                    <TextBlock Text="used" Foreground="#8A92A3" FontSize="14"
+                                               HorizontalAlignment="Right"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/StorageView.xaml.cs">
+using System.Windows.Controls;
+
+namespace Gaugr.App.Views;
+
+public partial class StorageView : UserControl
+{
+    public StorageView() => InitializeComponent();
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/app.manifest">
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <!-- LibreHardwareMonitor needs elevation to read CPU temperatures and fan speeds. -->
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 10 and 11 -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
+    </application>
+  </compatibility>
+</assembly>
+</file>
+
+<file path="Gaugr/Gaugr.App/AssemblyInfo.cs">
+using System.Windows;
+
+[assembly: ThemeInfo(
+    ResourceDictionaryLocation.None,            //where theme specific resource dictionaries are located
+                                                //(used if a resource is not found in the page,
+                                                // or application resource dictionaries)
+    ResourceDictionaryLocation.SourceAssembly   //where the generic resource dictionary is located
+                                                //(used if a resource is not found in the page,
+                                                // app, or any theme specific resource dictionaries)
+)]
+</file>
+
+<file path="Gaugr/Gaugr.App/OverlayWindow.xaml">
+<Window x:Class="Gaugr.App.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Gaugr overlay" Icon="pack://application:,,,/Assets/Gaugr.ico"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False"
+        ResizeMode="NoResize" SizeToContent="WidthAndHeight"
+        FontFamily="Segoe UI Variable Display, Segoe UI">
+    <Border Background="#E60B0D13" BorderBrush="#2A2F3D" BorderThickness="1"
+            CornerRadius="16" Padding="18,14" Cursor="SizeAll"
+            MouseLeftButtonDown="OnDrag">
+        <Border.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Close overlay" Click="OnClose"/>
+            </ContextMenu>
+        </Border.ContextMenu>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="CPU" Foreground="#8A92A3" FontSize="13" Margin="0,0,18,6"/>
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CpuValue}" Foreground="White"
+                       FontSize="15" FontWeight="SemiBold" TextAlignment="Right" Margin="0,0,0,6"/>
+
+            <TextBlock Grid.Row="1" Text="GPU" Foreground="#8A92A3" FontSize="13" Margin="0,0,18,6"/>
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding GpuValue}" Foreground="White"
+                       FontSize="15" FontWeight="SemiBold" TextAlignment="Right" Margin="0,0,0,6"/>
+
+            <TextBlock Grid.Row="2" Text="RAM" Foreground="#8A92A3" FontSize="13" Margin="0,0,18,0"/>
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding RamValue}" Foreground="White"
+                       FontSize="15" FontWeight="SemiBold" TextAlignment="Right"/>
+        </Grid>
+    </Border>
+</Window>
+</file>
+
+<file path="Gaugr/Gaugr.App/OverlayWindow.xaml.cs">
+using System.Windows;
+using System.Windows.Input;
+using Gaugr.App.Services;
+using Gaugr.App.ViewModels;
+
+namespace Gaugr.App;
+
+public partial class OverlayWindow : Window
+{
+    private const double ScreenMargin = 24;
+
+    private readonly SettingsService _settings;
+
+    public OverlayWindow(OverlayViewModel viewModel, SettingsService settings)
+    {
+        InitializeComponent();
+        DataContext = viewModel;
+        _settings = settings;
+        Loaded += (_, _) => Place();
+    }
+
+    // Back where it was last time, or the top-right corner if that spot is no longer on a screen
+    private void Place()
+    {
+        if (_settings.OverlayLeft is { } left && _settings.OverlayTop is { } top && IsOnScreen(left, top))
+        {
+            Left = left;
+            Top = top;
+            return;
+        }
+
+        var area = SystemParameters.WorkArea;
+        Left = area.Right - ActualWidth - ScreenMargin;
+        Top = area.Top + ScreenMargin;
+    }
+
+    private bool IsOnScreen(double left, double top) =>
+        left + ActualWidth > SystemParameters.VirtualScreenLeft + 40 &&
+        left < SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - 40 &&
+        top + ActualHeight > SystemParameters.VirtualScreenTop + 40 &&
+        top < SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - 40;
+
+    private void OnDrag(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState != MouseButtonState.Pressed) return;
+
+        DragMove();   // blocks until the button is released, and no mouse-up event follows
+        _settings.SetOverlayPosition(Left, Top);
+    }
+
+    private void OnClose(object sender, RoutedEventArgs e) => _settings.SetOverlayEnabled(false);
+}
+</file>
+
+<file path="Gaugr/Gaugr.slnx">
+<Solution>
+  <Project Path="Gaugr.App/Gaugr.App.csproj" />
+</Solution>
+</file>
+
+<file path="installer/Gaugr.iss">
+#ifndef MyAppVersion
+  #define MyAppVersion "0.1.0"
+#endif
+
+[Setup]
+AppId={{B7A9D8F2-4D15-4D6B-9B31-6A6C8C0F4A21}
+AppName=Gaugr
+AppVersion={#MyAppVersion}
+AppPublisher=Gaugr
+DefaultDirName={autopf}\Gaugr
+DefaultGroupName=Gaugr
+DisableProgramGroupPage=yes
+OutputDir=..\publish
+OutputBaseFilename=Gaugr-Setup
+Compression=lzma
+SolidCompression=yes
+WizardStyle=modern
+ArchitecturesInstallIn64BitMode=x64
+PrivilegesRequired=admin
+UninstallDisplayIcon={app}\Gaugr.exe
+CloseApplications=yes
+RestartApplications=no
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
+
+[Files]
+Source: "..\publish\Gaugr.exe"; DestDir: "{app}"; Flags: ignoreversion
+
+[Icons]
+Name: "{autoprograms}\Gaugr"; Filename: "{app}\Gaugr.exe"
+Name: "{autodesktop}\Gaugr"; Filename: "{app}\Gaugr.exe"; Tasks: desktopicon
+
+[Run]
+Filename: "{app}\Gaugr.exe"; Description: "Launch Gaugr"; Flags: postinstall nowait skipifsilent
+</file>
+
+<file path=".gitattributes">
+# Auto detect text files and perform LF normalization
+* text=auto
+</file>
+
+<file path=".gitignore">
+## Ignore Visual Studio temporary files, build results, and
+## files generated by popular Visual Studio add-ons.
+##
+## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# User-specific files (MonoDevelop/Xamarin Studio)
+*.userprefs
+
+# Mono auto generated files
+mono_crash.*
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio 2015/2017 cache/options directory
+.vs/
+# Uncomment if you have tasks that create the project's static files in wwwroot
+#wwwroot/
+
+# Visual Studio 2017 auto generated files
+Generated\ Files/
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# NUnit
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+
+# Build Results of an ATL Project
+[Dd]ebugPS/
+[Rr]eleasePS/
+dlldata.c
+
+# Benchmark Results
+BenchmarkDotNet.Artifacts/
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# StyleCop
+StyleCopReport.xml
+
+# Files built by Visual Studio
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+# but not Directory.Build.rsp, as it configures directory-level build defaults
+!Directory.Build.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Chutzpah Test files
+_Chutzpah*
+
+# Visual C++ cache files
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Visual Studio Trace Files
+*.e2e
+
+# TFS 2012 Local Workspace
+$tf/
+
+# Guidance Automation Toolkit
+*.gpState
+
+# ReSharper is a .NET coding add-in
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# TeamCity is a build add-in
+_TeamCity*
+
+# DotCover is a Code Coverage Tool
+*.dotCover
+
+# AxoCover is a Code Coverage Tool
+.axoCover/*
+!.axoCover/settings.json
+
+# Coverlet is a free, cross platform Code Coverage Tool
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# Visual Studio code coverage results
+*.coverage
+*.coveragexml
+
+# NCrunch
+_NCrunch_*
+.NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+# MightyMoose
+*.mm.*
+AutoTest.Net/
+
+# Web workbench (sass)
+.sass-cache/
+
+# Installshield output folder
+[Ee]xpress/
+
+# DocProject is a documentation generator add-in
+DocProject/buildhelp/
+DocProject/Help/*.HxT
+DocProject/Help/*.HxC
+DocProject/Help/*.hhc
+DocProject/Help/*.hhk
+DocProject/Help/*.hhp
+DocProject/Help/Html2
+DocProject/Help/html
+
+# Click-Once directory
+publish/
+
+# Publish Web Output
+*.[Pp]ublish.xml
+*.azurePubxml
+# Note: Comment the next line if you want to checkin your web deploy settings,
+# but database connection strings (with potential passwords) will be unencrypted
+*.pubxml
+*.publishproj
+
+# Microsoft Azure Web App publish settings. Comment the next line if you want to
+# checkin your Azure Web App publish settings, but sensitive information contained
+# in these scripts will be unencrypted
+PublishScripts/
+
+# NuGet Packages
+*.nupkg
+# NuGet Symbol Packages
+*.snupkg
+# The packages folder can be ignored because of Package Restore
+**/[Pp]ackages/*
+# except build/, which is used as an MSBuild target.
+!**/[Pp]ackages/build/
+# Uncomment if necessary however generally it will be regenerated when needed
+#!**/[Pp]ackages/repositories.config
+# NuGet v3's project.json files produces more ignorable files
+*.nuget.props
+*.nuget.targets
+
+# Microsoft Azure Build Output
+csx/
+*.build.csdef
+
+# Microsoft Azure Emulator
+ecf/
+rcf/
+
+# Windows Store app package directories and files
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+_pkginfo.txt
+*.appx
+*.appxbundle
+*.appxupload
+
+# Visual Studio cache files
+# files ending in .cache can be ignored
+*.[Cc]ache
+# but keep track of directories ending in .cache
+!?*.[Cc]ache/
+
+# Others
+ClientBin/
+~$*
+*~
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+*.pfx
+*.publishsettings
+orleans.codegen.cs
+
+# Including strong name files can present a security risk
+# (https://github.com/github/gitignore/pull/2483#issue-259490424)
+#*.snk
+
+# Since there are multiple workflows, uncomment next line to ignore bower_components
+# (https://github.com/github/gitignore/pull/1529#issuecomment-104372622)
+#bower_components/
+
+# RIA/Silverlight projects
+Generated_Code/
+
+# Backup & report files from converting an old project file
+# to a newer Visual Studio version. Backup files are not needed,
+# because we have git ;-)
+_UpgradeReport_Files/
+Backup*/
+UpgradeLog*.XML
+UpgradeLog*.htm
+ServiceFabricBackup/
+*.rptproj.bak
+
+# SQL Server files
+*.mdf
+*.ldf
+*.ndf
+
+# Business Intelligence projects
+*.rdl.data
+*.bim.layout
+*.bim_*.settings
+*.rptproj.rsuser
+*- [Bb]ackup.rdl
+*- [Bb]ackup ([0-9]).rdl
+*- [Bb]ackup ([0-9][0-9]).rdl
+
+# Microsoft Fakes
+FakesAssemblies/
+
+# GhostDoc plugin setting file
+*.GhostDoc.xml
+
+# Node.js Tools for Visual Studio
+.ntvs_analysis.dat
+node_modules/
+
+# Visual Studio 6 build log
+*.plg
+
+# Visual Studio 6 workspace options file
+*.opt
+
+# Visual Studio 6 auto-generated workspace file (contains which files were open etc.)
+*.vbw
+
+# Visual Studio 6 auto-generated project file (contains which files were open etc.)
+*.vbp
+
+# Visual Studio 6 workspace and project file (working project files containing files to include in project)
+*.dsw
+*.dsp
+
+# Visual Studio 6 technical files
+*.ncb
+*.aps
+
+# Visual Studio LightSwitch build output
+**/*.HTMLClient/GeneratedArtifacts
+**/*.DesktopClient/GeneratedArtifacts
+**/*.DesktopClient/ModelManifest.xml
+**/*.Server/GeneratedArtifacts
+**/*.Server/ModelManifest.xml
+_Pvt_Extensions
+
+# Paket dependency manager
+.paket/paket.exe
+paket-files/
+
+# FAKE - F# Make
+.fake/
+
+# CodeRush personal settings
+.cr/personal
+
+# Python Tools for Visual Studio (PTVS)
+__pycache__/
+*.pyc
+
+# Cake - Uncomment if you are using it
+# tools/**
+# !tools/packages.config
+
+# Tabs Studio
+*.tss
+
+# Telerik's JustMock configuration file
+*.jmconfig
+
+# BizTalk build output
+*.btp.cs
+*.btm.cs
+*.odx.cs
+*.xsd.cs
+
+# OpenCover UI analysis results
+OpenCover/
+
+# Azure Stream Analytics local run output
+ASALocalRun/
+
+# MSBuild Binary and Structured Log
+*.binlog
+
+# NVidia Nsight GPU debugger configuration file
+*.nvuser
+
+# MFractors (Xamarin productivity tool) working folder
+.mfractor/
+
+# Local History for Visual Studio
+.localhistory/
+
+# Visual Studio History (VSHistory) files
+.vshistory/
+
+# BeatPulse healthcheck temp database
+healthchecksdb
+
+# Backup folder for Package Reference Convert tool in Visual Studio 2017
+MigrationBackup/
+
+# Ionide (cross platform F# VS Code tools) working folder
+.ionide/
+
+# Fody - auto-generated XML schema
+FodyWeavers.xsd
+
+# VS Code files for those working on multiple tools
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+# Windows Installer files from build outputs
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# JetBrains Rider
+*.sln.iml
+</file>
+
+<file path="LICENSE">
+GAUGR PROPRIETARY LICENSE
+Version 1.0 — 21 October 2026
+
+Copyright (c) 2026 zaidwh0x. All rights reserved.
+
+This license applies to the Gaugr software and its accompanying source code and documentation in this repository (the "Software"), except for third-party components identified separately.
+
+1. Personal-use permission
+Subject to this license, the copyright holder grants you a limited, revocable, non-exclusive, non-transferable permission to download, inspect, compile, and run the Software solely for your own personal, non-commercial use.
+
+2. Restrictions
+Unless you obtain prior written permission from the copyright holder, you may not:
+- use the Software for commercial purposes, including as part of a paid service, product, business, or organizational deployment;
+- sell, rent, sublicense, publish, or redistribute the Software or modified versions of it;
+- modify, adapt, or create derivative works of the Software for distribution or other use beyond the personal-use permission in Section 1;
+- copy substantial portions of the Software into another product or project;
+- remove or alter copyright, attribution, or license notices.
+
+3. No transfer of ownership
+The Software is licensed, not sold. No ownership, trademark, or other intellectual-property rights are transferred to you. All rights not expressly granted are reserved by the copyright holder.
+
+4. Third-party components
+Third-party libraries and components remain subject to their own licenses. This license does not replace or override those terms. You are responsible for complying with applicable third-party license notices and obligations.
+
+5. No warranty
+To the maximum extent permitted by applicable law, the Software is provided "AS IS", without warranties or conditions of any kind, express or implied, including fitness for a particular purpose, merchantability, and non-infringement.
+
+6. Limitation of liability
+To the maximum extent permitted by applicable law, the copyright holder will not be liable for any indirect, incidental, special, consequential, or punitive damages, or loss of data, profits, or use, arising from or related to the Software.
+
+7. Termination
+This permission terminates automatically if you materially violate this license. Upon termination, you must stop using the Software and delete copies in your possession, except where retention is required by law.
+
+8. Requests for additional permission
+For commercial licensing, redistribution permission, or other exceptions, contact the copyright holder through the GitHub profile at https://github.com/zaidwh0x.
+
+9. Governing law
+Any governing-law or dispute-resolution terms must be agreed in writing by the parties or determined under applicable law. Nothing in this license excludes rights or remedies that cannot lawfully be excluded.
+
+By accessing or using the Software, you agree to comply with this license to the extent permitted by applicable law.
+</file>
+
+<file path="Gaugr/Gaugr.App/Controls/TickGauge.cs">
+using System.Windows;
+using System.Windows.Media;
+
+namespace Gaugr.App.Controls;
+
+public class TickGauge : FrameworkElement
+{
+    private static readonly Pen UnlitPen = CreatePen(Color.FromRgb(42, 45, 54), 2.5);
+
+    public static readonly DependencyProperty ValueProperty =
+        DependencyProperty.Register(nameof(Value), typeof(double), typeof(TickGauge),
+            new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty StartColorProperty =
+        DependencyProperty.Register(nameof(StartColor), typeof(Color), typeof(TickGauge),
+            new FrameworkPropertyMetadata(Color.FromRgb(120, 215, 255), FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty EndColorProperty =
+        DependencyProperty.Register(nameof(EndColor), typeof(Color), typeof(TickGauge),
+            new FrameworkPropertyMetadata(Color.FromRgb(40, 110, 255), FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public double Value
+    {
+        get => (double)GetValue(ValueProperty);
+        set => SetValue(ValueProperty, value);   // 0-100
+    }
+
+    public Color StartColor
+    {
+        get => (Color)GetValue(StartColorProperty);
+        set => SetValue(StartColorProperty, value);
+    }
+
+    public Color EndColor
+    {
+        get => (Color)GetValue(EndColorProperty);
+        set => SetValue(EndColorProperty, value);
+    }
+
+    protected override void OnRender(DrawingContext dc)
+    {
+        const int ticks = 42;
+        const double start = 165, sweep = 210;   // degrees, clockwise from 3 o'clock; opens at the bottom
+
+        var center = new Point(ActualWidth / 2, ActualHeight / 2);
+        double rOut = Math.Min(ActualWidth, ActualHeight) / 2 - 4;
+        if (rOut <= 0) return;
+
+        int lit = (int)Math.Round(Math.Clamp(Value, 0, 100) / 100 * ticks);
+
+        DrawGlow(dc, center, rOut);
+
+        for (int i = 0; i < ticks; i++)
+        {
+            double t = i / (double)(ticks - 1);
+            double angle = (start + t * sweep) * Math.PI / 180;
+            var dir = new Vector(Math.Cos(angle), Math.Sin(angle));
+
+            if (i < lit)
+            {
+                // lit ticks are longer and grow slightly towards the leading edge
+                double rIn = rOut * (0.74 + 0.04 * (1 - t));
+                dc.DrawLine(CreatePen(Lerp(StartColor, EndColor, t), 3), center + dir * rIn, center + dir * rOut);
+            }
+            else
+            {
+                dc.DrawLine(UnlitPen, center + dir * (rOut * 0.84), center + dir * rOut);
+            }
+        }
+    }
+
+    // soft coloured pool of light under the arc
+    private void DrawGlow(DrawingContext dc, Point center, double rOut)
+    {
+        var tint = Lerp(StartColor, EndColor, 0.5);
+        var brush = new RadialGradientBrush(
+            Color.FromArgb(120, tint.R, tint.G, tint.B),
+            Color.FromArgb(0, tint.R, tint.G, tint.B));
+        brush.Freeze();
+        dc.DrawEllipse(brush, null, new Point(center.X, center.Y + rOut * 0.72), rOut * 1.05, rOut * 0.3);
+    }
+
+    private static Pen CreatePen(Color color, double thickness)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        var pen = new Pen(brush, thickness)
+        {
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round
+        };
+        pen.Freeze();
+        return pen;
+    }
+
+    private static Color Lerp(Color a, Color b, double t) => Color.FromRgb(
+        (byte)(a.R + (b.R - a.R) * t),
+        (byte)(a.G + (b.G - a.G) * t),
+        (byte)(a.B + (b.B - a.B) * t));
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Services/MonitorHub.cs">
+using System.Windows.Threading;
+
+namespace Gaugr.App.Services;
+
+public sealed class MonitorHub : IDisposable
+{
+    public const int HistoryLength = 600;   // 5 minutes at the fastest refresh rate (2 samples per second)
+
+    private readonly SettingsService _settings;
+    private readonly HardwareMonitorService _hardware = new();
+    private readonly DispatcherTimer _timer = new();
+    private readonly List<HardwareSnapshot> _history = new();
+    private bool _busy;
+
+    public MonitorHub(SettingsService settings)
+    {
+        _settings = settings;
+        _timer.Interval = TimeSpan.FromSeconds(settings.RefreshSeconds);
+        settings.Changed += OnSettingsChanged;
+    }
+
+    public HardwareSnapshot? Latest { get; private set; }
+    public IReadOnlyList<HardwareSnapshot> History => _history;
+    public double IntervalSeconds => _timer.Interval.TotalSeconds;
+
+    public event Action<HardwareSnapshot>? Updated;
+    public event Action? IntervalChanged;
+
+    public void Start()
+    {
+        _timer.Tick += async (_, _) => await TickAsync();
+        _timer.Start();
+        _ = TickAsync();
+    }
+
+    private void OnSettingsChanged()
+    {
+        var interval = TimeSpan.FromSeconds(_settings.RefreshSeconds);
+        if (interval == _timer.Interval) return;
+
+        _timer.Interval = interval;
+        _history.Clear();   // samples taken at a different rate would distort the graph windows
+        IntervalChanged?.Invoke();
+    }
+
+    private async Task TickAsync()
+    {
+        if (_busy) return;
+        _busy = true;
+        try
+        {
+            var snap = await Task.Run(_hardware.Read);   // sensors read off the UI thread
+
+            Latest = snap;                               // everything below runs on the UI thread
+            _history.Add(snap);
+            if (_history.Count > HistoryLength) _history.RemoveAt(0);
+            Updated?.Invoke(snap);
+        }
+        finally { _busy = false; }
+    }
+
+    public void Dispose()
+    {
+        _timer.Stop();
+        _hardware.Dispose();
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Services/StartupService.cs">
+using System.Diagnostics;
+using System.IO;
+using System.Security;
+using System.Text;
+
+namespace Gaugr.App.Services;
+
+/// <summary>
+/// Starts Gaugr at sign-in through a scheduled task. A plain Run registry entry cannot
+/// launch an app that requires administrator rights, so a highest-privilege task is used.
+/// </summary>
+public sealed class StartupService
+{
+    private const string TaskName = "Gaugr";
+
+    public bool IsEnabled() => RunSchtasks($"/Query /TN \"{TaskName}\"") == 0;
+
+    public bool Enable()
+    {
+        var exe = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(exe)) return false;
+
+        var xmlPath = Path.Combine(Path.GetTempPath(), "gaugr-startup-task.xml");
+        try
+        {
+            File.WriteAllText(xmlPath, BuildTaskXml(exe), Encoding.Unicode);
+            return RunSchtasks($"/Create /TN \"{TaskName}\" /XML \"{xmlPath}\" /F") == 0;
+        }
+        catch { return false; }
+        finally
+        {
+            try { File.Delete(xmlPath); } catch { }
+        }
+    }
+
+    public bool Disable() => !IsEnabled() || RunSchtasks($"/Delete /TN \"{TaskName}\" /F") == 0;
+
+    // The XML form allows battery use and removes the default 72-hour limit, which the
+    // command-line switches of schtasks cannot do.
+    private static string BuildTaskXml(string exe)
+    {
+        var user = SecurityElement.Escape($"{Environment.UserDomainName}\\{Environment.UserName}");
+        var command = SecurityElement.Escape(exe);
+        var folder = SecurityElement.Escape(Path.GetDirectoryName(exe) ?? "");
+
+        return $"""
+            <?xml version="1.0" encoding="UTF-16"?>
+            <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+              <Triggers>
+                <LogonTrigger>
+                  <Enabled>true</Enabled>
+                  <UserId>{user}</UserId>
+                </LogonTrigger>
+              </Triggers>
+              <Principals>
+                <Principal id="Author">
+                  <UserId>{user}</UserId>
+                  <LogonType>InteractiveToken</LogonType>
+                  <RunLevel>HighestAvailable</RunLevel>
+                </Principal>
+              </Principals>
+              <Settings>
+                <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+                <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+                <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+                <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+                <Enabled>true</Enabled>
+              </Settings>
+              <Actions Context="Author">
+                <Exec>
+                  <Command>{command}</Command>
+                  <Arguments>--minimized</Arguments>
+                  <WorkingDirectory>{folder}</WorkingDirectory>
+                </Exec>
+              </Actions>
+            </Task>
+            """;
+    }
+
+    private static int RunSchtasks(string arguments)
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo("schtasks.exe", arguments)
+            {
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            });
+            if (process is null) return -1;
+
+            process.StandardOutput.ReadToEnd();
+            process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            return process.ExitCode;
+        }
+        catch { return -1; }
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Services/TrayService.cs">
+namespace Gaugr.App.Services;
+
+/// <summary>The Gaugr icon in the Windows notification area, with its menu and balloon alerts.</summary>
+public sealed class TrayService : IDisposable
+{
+    private readonly System.Windows.Forms.NotifyIcon _icon;
+    private readonly System.Windows.Forms.ToolStripMenuItem _overlayItem;
+
+    public TrayService()
+    {
+        var menu = new System.Windows.Forms.ContextMenuStrip();
+        menu.Items.Add("Open Gaugr", null, (_, _) => OpenRequested?.Invoke());
+
+        _overlayItem = new System.Windows.Forms.ToolStripMenuItem("Compact overlay");
+        _overlayItem.Click += (_, _) => OverlayToggleRequested?.Invoke();
+        menu.Items.Add(_overlayItem);
+
+        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+        menu.Items.Add("Exit", null, (_, _) => ExitRequested?.Invoke());
+
+        _icon = new System.Windows.Forms.NotifyIcon
+        {
+            Icon = LoadIcon(),
+            Text = "Gaugr",
+            ContextMenuStrip = menu,
+            Visible = true
+        };
+
+        _icon.MouseClick += (_, e) =>
+        {
+            if (e.Button == System.Windows.Forms.MouseButtons.Left) OpenRequested?.Invoke();
+        };
+    }
+
+    public event Action? OpenRequested;
+    public event Action? ExitRequested;
+    public event Action? OverlayToggleRequested;
+
+    public void SetOverlayChecked(bool value) => _overlayItem.Checked = value;
+
+    public void Notify(string title, string message) =>
+        _icon.ShowBalloonTip(6000, title, message, System.Windows.Forms.ToolTipIcon.Warning);
+
+    // the exe carries the Gaugr icon, so reuse it
+    private static System.Drawing.Icon LoadIcon()
+    {
+        try
+        {
+            var path = Environment.ProcessPath;
+            if (path is not null && System.Drawing.Icon.ExtractAssociatedIcon(path) is { } icon) return icon;
+        }
+        catch { /* fall through to the generic icon */ }
+
+        return System.Drawing.SystemIcons.Application;
+    }
+
+    public void Dispose()
+    {
+        _icon.Visible = false;   // otherwise Windows leaves a ghost icon until you hover over it
+        _icon.Dispose();
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/ViewModels/PerformanceViewModel.cs">
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Gaugr.App.Services;
+using SkiaSharp;
+
+namespace Gaugr.App.ViewModels;
+
+public partial class PerformanceViewModel : ObservableObject
+{
+    private readonly MonitorHub _hub;
+    private readonly SettingsService _settings;
+    private readonly ObservableCollection<double> _cpuLoad = new(), _cpuTemp = new(),
+                                                  _gpuLoad = new(), _gpuTemp = new(),
+                                                  _ramUsed = new();
+
+    [ObservableProperty] private int _windowSeconds = 60;
+
+    public ChartModel Cpu { get; }
+    public ChartModel Gpu { get; }
+    public ChartModel Ram { get; }
+
+    // How many samples fit in the chosen window at the current refresh rate
+    private int Samples => Math.Max(2, (int)Math.Round(WindowSeconds / _hub.IntervalSeconds));
+
+    public PerformanceViewModel(MonitorHub hub, SettingsService settings)
+    {
+        _hub = hub;
+        _settings = settings;
+
+        var blue = new SKColor(40, 140, 255);
+        var orange = new SKColor(255, 160, 40);
+        var green = new SKColor(52, 211, 153);
+
+        Cpu = new ChartModel((_cpuLoad, blue), (_cpuTemp, orange));
+        Gpu = new ChartModel((_gpuLoad, blue), (_gpuTemp, orange));
+        Ram = new ChartModel((_ramUsed, green));
+
+        ApplyWindow();
+        hub.Updated += OnUpdated;
+        hub.IntervalChanged += ApplyWindow;
+        settings.Changed += () =>
+        {
+            if (_hub.Latest is { } latest) UpdateSummaries(latest);
+        };
+    }
+
+    partial void OnWindowSecondsChanged(int value) => ApplyWindow();
+
+    [RelayCommand]
+    private void SetWindow(string seconds) => WindowSeconds = int.Parse(seconds);
+
+    private void ApplyWindow()
+    {
+        foreach (var chart in new[] { Cpu, Gpu, Ram }) chart.SetWindow(Samples);
+
+        Refill(_cpuLoad, s => s.CpuLoad);
+        Refill(_cpuTemp, s => s.CpuTemp);
+        Refill(_gpuLoad, s => s.GpuLoad);
+        Refill(_gpuTemp, s => s.GpuTemp);
+        Refill(_ramUsed, s => s.RamPercent);
+
+        if (_hub.Latest is { } latest) UpdateSummaries(latest);
+    }
+
+    // Rebuilds a graph from the shared history (used when you switch 60 s / 5 min)
+    private void Refill(ObservableCollection<double> target, Func<HardwareSnapshot, double> pick)
+    {
+        target.Clear();
+        foreach (var s in _hub.History.TakeLast(Samples)) target.Add(pick(s));
+    }
+
+    private void OnUpdated(HardwareSnapshot s)
+    {
+        Push(_cpuLoad, s.CpuLoad);
+        Push(_cpuTemp, s.CpuTemp);
+        Push(_gpuLoad, s.GpuLoad);
+        Push(_gpuTemp, s.GpuTemp);
+        Push(_ramUsed, s.RamPercent);
+        UpdateSummaries(s);
+    }
+
+    private void Push(ObservableCollection<double> list, double value)
+    {
+        list.Add(value);
+        while (list.Count > Samples) list.RemoveAt(0);
+    }
+
+    // Charts always plot temperature in °C; only the summary text follows the chosen unit
+    private void UpdateSummaries(HardwareSnapshot s)
+    {
+        var unit = _settings.TemperatureLabel;
+        Cpu.Summary = $"{s.CpuLoad:0}% usage  ·  {_settings.ConvertTemperature(s.CpuTemp):0}{unit}";
+        Gpu.Summary = $"{s.GpuLoad:0}% usage  ·  {_settings.ConvertTemperature(s.GpuTemp):0}{unit}";
+        Ram.Summary = $"{s.RamPercent:0}%  ·  {s.RamLabel}";
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/PerformanceView.xaml">
+<UserControl x:Class="Gaugr.App.Views.PerformanceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF">
+    <UserControl.Resources>
+        <Style x:Key="ChartCard" TargetType="Border">
+            <Setter Property="Background" Value="#12151C"/>
+            <Setter Property="BorderBrush" Value="#1E232D"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="8"/>
+        </Style>
+
+        <Style x:Key="RangeButton" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#8A92A3"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" CornerRadius="8" Padding="12,7" Background="#12151C">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#161A23"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#1C2230"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="8,0,8,12">
+            <StackPanel>
+                <TextBlock Text="Performance" Foreground="White" FontSize="32" FontWeight="SemiBold"/>
+                <TextBlock Text="Live history of your PC" Foreground="#8A92A3" FontSize="15"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                <RadioButton Content="60 seconds" GroupName="range" IsChecked="True"
+                             Style="{StaticResource RangeButton}"
+                             Command="{Binding SetWindowCommand}" CommandParameter="60"/>
+                <RadioButton Content="5 minutes" GroupName="range"
+                             Style="{StaticResource RangeButton}"
+                             Command="{Binding SetWindowCommand}" CommandParameter="300"/>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Style="{StaticResource ChartCard}" DataContext="{Binding Cpu}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="CPU" Foreground="White" FontSize="20" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Summary}" Foreground="#8A92A3" FontSize="13"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <TextBlock Text="● Usage" Foreground="#288CFF" FontSize="12" Margin="0,0,14,0"/>
+                            <TextBlock Text="● Temperature" Foreground="#FFA028" FontSize="12"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <lvc:CartesianChart Grid.Row="1" Background="Transparent" Series="{Binding Series}"
+                                        XAxes="{Binding XAxes}" YAxes="{Binding YAxes}"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Style="{StaticResource ChartCard}" DataContext="{Binding Gpu}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="GPU" Foreground="White" FontSize="20" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Summary}" Foreground="#8A92A3" FontSize="13"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <TextBlock Text="● Usage" Foreground="#288CFF" FontSize="12" Margin="0,0,14,0"/>
+                            <TextBlock Text="● Temperature" Foreground="#FFA028" FontSize="12"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <lvc:CartesianChart Grid.Row="1" Background="Transparent" Series="{Binding Series}"
+                                        XAxes="{Binding XAxes}" YAxes="{Binding YAxes}"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Style="{StaticResource ChartCard}" DataContext="{Binding Ram}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Margin="0,0,0,8">
+                    <TextBlock Text="RAM" Foreground="White" FontSize="20" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Summary}" Foreground="#8A92A3" FontSize="13"/>
+                </StackPanel>
+                <lvc:CartesianChart Grid.Row="1" Background="Transparent" Series="{Binding Series}"
+                                    XAxes="{Binding XAxes}" YAxes="{Binding YAxes}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
+</file>
+
+<file path="Gaugr/Gaugr.App/App.xaml">
+<Application x:Class="Gaugr.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Gaugr.App">
+    <Application.Resources>
+         
+    </Application.Resources>
+</Application>
+</file>
+
+<file path="Gaugr/Gaugr.App/Services/SettingsService.cs">
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace Gaugr.App.Services;
+
+public enum TemperatureUnit { Celsius, Fahrenheit }
+
+public enum AlertMetric { CpuTemperature, GpuTemperature, Ram, Storage }
+
+/// <summary>User preferences, stored as JSON in %AppData%\Gaugr\settings.json.</summary>
+public sealed class SettingsService
+{
+    public static readonly double[] RefreshChoices = { 0.5, 1, 2, 5 };
+
+    private static readonly string FilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Gaugr", "settings.json");
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    private SettingsData _data = new();
+
+    public TemperatureUnit TemperatureUnit => _data.TemperatureUnit;
+    public double RefreshSeconds => _data.RefreshSeconds;
+    public bool CloseToTray => _data.CloseToTray;
+    public bool AlertsEnabled => _data.AlertsEnabled;
+    public bool OverlayEnabled => _data.OverlayEnabled;
+    public double? OverlayLeft => _data.OverlayLeft;
+    public double? OverlayTop => _data.OverlayTop;
+
+    public string TemperatureLabel => TemperatureUnit == TemperatureUnit.Fahrenheit ? "°F" : "°C";
+
+    public event Action? Changed;
+
+    public static SettingsService Load()
+    {
+        var settings = new SettingsService();
+        try
+        {
+            if (File.Exists(FilePath))
+            {
+                var data = JsonSerializer.Deserialize<SettingsData>(File.ReadAllText(FilePath), JsonOptions);
+                if (data is not null) settings._data = Sanitize(data);
+            }
+        }
+        catch { /* a missing or damaged settings file just means defaults */ }
+
+        return settings;
+    }
+
+    public double ConvertTemperature(double celsius) =>
+        TemperatureUnit == TemperatureUnit.Fahrenheit ? celsius * 9 / 5 + 32 : celsius;
+
+    /// <summary>Alert limit for a metric: °C for temperatures, % for usage. 0 means the alert is off.</summary>
+    public int GetAlertLimit(AlertMetric metric) => metric switch
+    {
+        AlertMetric.CpuTemperature => _data.CpuAlert,
+        AlertMetric.GpuTemperature => _data.GpuAlert,
+        AlertMetric.Ram => _data.RamAlert,
+        _ => _data.StorageAlert
+    };
+
+    public void SetTemperatureUnit(TemperatureUnit unit) => Update(d => d.TemperatureUnit = unit);
+
+    public void SetRefreshSeconds(double seconds)
+    {
+        if (RefreshChoices.Contains(seconds)) Update(d => d.RefreshSeconds = seconds);
+    }
+
+    public void SetCloseToTray(bool value) => Update(d => d.CloseToTray = value);
+
+    public void SetAlertsEnabled(bool value) => Update(d => d.AlertsEnabled = value);
+
+    public void SetOverlayEnabled(bool value) => Update(d => d.OverlayEnabled = value);
+
+    // Saved while dragging the overlay, so nothing else needs to hear about it
+    public void SetOverlayPosition(double left, double top) => Update(d =>
+    {
+        d.OverlayLeft = left;
+        d.OverlayTop = top;
+    }, notify: false);
+
+    public void SetAlertLimit(AlertMetric metric, int limit) => Update(d =>
+    {
+        limit = Math.Clamp(limit, 0, 100);
+        switch (metric)
+        {
+            case AlertMetric.CpuTemperature: d.CpuAlert = limit; break;
+            case AlertMetric.GpuTemperature: d.GpuAlert = limit; break;
+            case AlertMetric.Ram: d.RamAlert = limit; break;
+            default: d.StorageAlert = limit; break;
+        }
+    });
+
+    private void Update(Action<SettingsData> change, bool notify = true)
+    {
+        change(_data);
+        Save();
+        if (notify) Changed?.Invoke();
+    }
+
+    private void Save()
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            File.WriteAllText(FilePath, JsonSerializer.Serialize(_data, JsonOptions));
+        }
+        catch { /* the setting still applies for this session */ }
+    }
+
+    private static SettingsData Sanitize(SettingsData data)
+    {
+        if (!RefreshChoices.Contains(data.RefreshSeconds)) data.RefreshSeconds = 1;
+        data.CpuAlert = Math.Clamp(data.CpuAlert, 0, 100);
+        data.GpuAlert = Math.Clamp(data.GpuAlert, 0, 100);
+        data.RamAlert = Math.Clamp(data.RamAlert, 0, 100);
+        data.StorageAlert = Math.Clamp(data.StorageAlert, 0, 100);
+        return data;
+    }
+
+    internal sealed class SettingsData
+    {
+        public TemperatureUnit TemperatureUnit { get; set; } = TemperatureUnit.Celsius;
+        public double RefreshSeconds { get; set; } = 1;
+        public bool CloseToTray { get; set; }
+        public bool AlertsEnabled { get; set; } = true;
+        public int CpuAlert { get; set; } = 90;
+        public int GpuAlert { get; set; } = 90;
+        public int RamAlert { get; set; } = 95;
+        public int StorageAlert { get; set; }
+        public bool OverlayEnabled { get; set; }
+        public double? OverlayLeft { get; set; }
+        public double? OverlayTop { get; set; }
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/ViewModels/SettingsViewModel.cs">
+using System.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Gaugr.App.Services;
+
+namespace Gaugr.App.ViewModels;
+
+/// <summary>One alert limit with − / + buttons. A value of 0 means the alert is off.</summary>
+public partial class AlertThreshold : ObservableObject
+{
+    private readonly string _unit;
+    private readonly int _min, _max, _step;
+    private readonly Action<int> _save;
+
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(Text))] private int _value;
+
+    public AlertThreshold(string title, string unit, int min, int max, int step, int value, Action<int> save)
+    {
+        Title = title;
+        _unit = unit;
+        _min = min;
+        _max = max;
+        _step = step;
+        _value = value;
+        _save = save;
+    }
+
+    public string Title { get; }
+    public string Text => Value == 0 ? "Off" : $"{Value} {_unit}";
+
+    [RelayCommand]
+    private void Increase()
+    {
+        Value = Value == 0 ? _min : Math.Min(Value + _step, _max);
+        _save(Value);
+    }
+
+    [RelayCommand]
+    private void Decrease()
+    {
+        Value = Value <= _min ? 0 : Value - _step;
+        _save(Value);
+    }
+}
+
+public partial class SettingsViewModel : ObservableObject
+{
+    private readonly SettingsService _settings;
+    private readonly StartupService _startup;
+    private readonly Action _sendTestAlert;
+    private bool _startWithWindows;
+
+    [ObservableProperty] private string _startupMessage = "";
+
+    public SettingsViewModel(SettingsService settings, StartupService startup, Action sendTestAlert)
+    {
+        _settings = settings;
+        _startup = startup;
+        _sendTestAlert = sendTestAlert;
+
+        // the overlay can also be switched from the tray menu
+        settings.Changed += () => OnPropertyChanged(nameof(OverlayEnabled));
+
+        Thresholds =
+        [
+            Threshold("CPU temperature", "°C", 60, 100, AlertMetric.CpuTemperature),
+            Threshold("GPU temperature", "°C", 60, 100, AlertMetric.GpuTemperature),
+            Threshold("Memory usage", "%", 50, 100, AlertMetric.Ram),
+            Threshold("Storage usage", "%", 50, 100, AlertMetric.Storage),
+        ];
+    }
+
+    public IReadOnlyList<AlertThreshold> Thresholds { get; }
+
+    // Radio buttons bind two-way to these; only the one being switched on does anything.
+    public bool IsCelsius
+    {
+        get => _settings.TemperatureUnit == TemperatureUnit.Celsius;
+        set { if (value) SetUnit(TemperatureUnit.Celsius); }
+    }
+
+    public bool IsFahrenheit
+    {
+        get => _settings.TemperatureUnit == TemperatureUnit.Fahrenheit;
+        set { if (value) SetUnit(TemperatureUnit.Fahrenheit); }
+    }
+
+    public bool IsRefreshHalfSecond { get => _settings.RefreshSeconds == 0.5; set { if (value) SetRefresh(0.5); } }
+    public bool IsRefreshOneSecond { get => _settings.RefreshSeconds == 1; set { if (value) SetRefresh(1); } }
+    public bool IsRefreshTwoSeconds { get => _settings.RefreshSeconds == 2; set { if (value) SetRefresh(2); } }
+    public bool IsRefreshFiveSeconds { get => _settings.RefreshSeconds == 5; set { if (value) SetRefresh(5); } }
+
+    public bool CloseToTray
+    {
+        get => _settings.CloseToTray;
+        set => _settings.SetCloseToTray(value);
+    }
+
+    public bool AlertsEnabled
+    {
+        get => _settings.AlertsEnabled;
+        set => _settings.SetAlertsEnabled(value);
+    }
+
+    public bool OverlayEnabled
+    {
+        get => _settings.OverlayEnabled;
+        set => _settings.SetOverlayEnabled(value);
+    }
+
+    public bool StartWithWindows
+    {
+        get => _startWithWindows;
+        set
+        {
+            if (_startWithWindows == value) return;
+
+            bool ok = value ? _startup.Enable() : _startup.Disable();
+            if (ok)
+            {
+                _startWithWindows = value;
+                StartupMessage = "";
+            }
+            else
+            {
+                StartupMessage = "Windows did not allow that change. Make sure Gaugr is running as administrator and try again.";
+            }
+
+            // Re-read after the binding finishes writing, so a refused change flips the switch back
+            Application.Current.Dispatcher.BeginInvoke(() => OnPropertyChanged(nameof(StartWithWindows)));
+        }
+    }
+
+    [RelayCommand]
+    private void SendTestAlert() => _sendTestAlert();
+
+    // Called each time the page opens, since the startup task can be changed outside Gaugr
+    public void Refresh()
+    {
+        _startWithWindows = _startup.IsEnabled();
+        OnPropertyChanged(nameof(StartWithWindows));
+        StartupMessage = "";
+    }
+
+    private AlertThreshold Threshold(string title, string unit, int min, int max, AlertMetric metric) =>
+        new(title, unit, min, max, 5, _settings.GetAlertLimit(metric), value => _settings.SetAlertLimit(metric, value));
+
+    private void SetUnit(TemperatureUnit unit)
+    {
+        _settings.SetTemperatureUnit(unit);
+        OnPropertyChanged(nameof(IsCelsius));
+        OnPropertyChanged(nameof(IsFahrenheit));
+    }
+
+    private void SetRefresh(double seconds)
+    {
+        _settings.SetRefreshSeconds(seconds);
+        OnPropertyChanged(nameof(IsRefreshHalfSecond));
+        OnPropertyChanged(nameof(IsRefreshOneSecond));
+        OnPropertyChanged(nameof(IsRefreshTwoSeconds));
+        OnPropertyChanged(nameof(IsRefreshFiveSeconds));
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/SettingsView.xaml">
+<UserControl x:Class="Gaugr.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="SettingCard" TargetType="Border">
+            <Setter Property="Margin" Value="8,0,8,14"/>
+            <Setter Property="Padding" Value="26,22"/>
+            <Setter Property="CornerRadius" Value="22"/>
+            <Setter Property="BorderBrush" Value="#1C2028"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#101218"/>
+        </Style>
+
+        <Style x:Key="ChoiceButton" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#8A92A3"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" CornerRadius="10" Padding="16,9" Background="#161920"
+                                BorderBrush="#232733" BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#1F2330"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#2A2D36"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#3A4054"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Switch" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="track" Width="52" Height="30" CornerRadius="15" Background="#232733">
+                            <Ellipse x:Name="knob" Width="22" Height="22" Fill="White"
+                                     HorizontalAlignment="Left" Margin="4,0,0,0"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="track" Property="Background" Value="#2F6BFF"/>
+                                <Setter TargetName="knob" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="knob" Property="Margin" Value="0,0,4,0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="StepButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="10" Background="#161920"
+                                BorderBrush="#232733" BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#1F2330"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#343A4D"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ActionButton" TargetType="Button" BasedOn="{StaticResource StepButton}">
+            <Setter Property="Width" Value="Auto"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="18,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="8,0,8,18">
+            <TextBlock Text="Settings" Foreground="White" FontSize="14"/>
+            <TextBlock Text="Make Gaugr yours" Foreground="White" FontSize="38" FontWeight="Light"
+                       Margin="0,22,0,0"/>
+            <TextBlock Text="Changes are saved automatically" Foreground="#8A92A3" FontSize="15"
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+
+                <Border Style="{StaticResource SettingCard}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                            <TextBlock Text="Temperature unit" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock Text="Used for the gauges and summaries. Performance charts always plot in °C."
+                                       Foreground="#8A92A3" FontSize="14" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <RadioButton Content="°C" GroupName="unit" Style="{StaticResource ChoiceButton}"
+                                         IsChecked="{Binding IsCelsius, Mode=TwoWay}"/>
+                            <RadioButton Content="°F" GroupName="unit" Style="{StaticResource ChoiceButton}"
+                                         IsChecked="{Binding IsFahrenheit, Mode=TwoWay}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource SettingCard}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                            <TextBlock Text="Refresh rate" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock Text="How often sensors are read. Faster updates use a little more CPU. Changing this clears the live graphs."
+                                       Foreground="#8A92A3" FontSize="14" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <RadioButton Content="0.5 s" GroupName="refresh" Style="{StaticResource ChoiceButton}"
+                                         IsChecked="{Binding IsRefreshHalfSecond, Mode=TwoWay}"/>
+                            <RadioButton Content="1 s" GroupName="refresh" Style="{StaticResource ChoiceButton}"
+                                         IsChecked="{Binding IsRefreshOneSecond, Mode=TwoWay}"/>
+                            <RadioButton Content="2 s" GroupName="refresh" Style="{StaticResource ChoiceButton}"
+                                         IsChecked="{Binding IsRefreshTwoSeconds, Mode=TwoWay}"/>
+                            <RadioButton Content="5 s" GroupName="refresh" Style="{StaticResource ChoiceButton}"
+                                         IsChecked="{Binding IsRefreshFiveSeconds, Mode=TwoWay}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource SettingCard}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                            <TextBlock Text="Start with Windows" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock Text="Open Gaugr automatically when you sign in. Uses a scheduled task, so the administrator prompt does not appear at startup."
+                                       Foreground="#8A92A3" FontSize="14" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding StartupMessage}" Foreground="#FF8A5C" FontSize="13"
+                                       Margin="0,8,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1" VerticalAlignment="Center"
+                                      Style="{StaticResource Switch}"
+                                      IsChecked="{Binding StartWithWindows, Mode=TwoWay}"/>
+                    </Grid>
+                </Border>
+
+
+                <Border Style="{StaticResource SettingCard}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                            <TextBlock Text="Compact overlay" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock Text="A small always-on-top panel with CPU, GPU and memory readings. Drag it anywhere and right-click it to close. It shows over windowed and borderless games, but not over exclusive full-screen ones. You can also toggle it from the tray menu."
+                                       Foreground="#8A92A3" FontSize="14" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1" VerticalAlignment="Center"
+                                      Style="{StaticResource Switch}"
+                                      IsChecked="{Binding OverlayEnabled, Mode=TwoWay}"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource SettingCard}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                            <TextBlock Text="Keep running in the tray" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock Text="Closing the window hides Gaugr in the system tray instead of quitting, so alerts keep working. Use Exit in the tray menu to quit."
+                                       Foreground="#8A92A3" FontSize="14" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1" VerticalAlignment="Center"
+                                      Style="{StaticResource Switch}"
+                                      IsChecked="{Binding CloseToTray, Mode=TwoWay}"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource SettingCard}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                                <TextBlock Text="Alerts" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                                <TextBlock Text="Get a Windows notification when a reading goes over its limit. Each alert shows once, and again only after the reading drops back down. Temperature limits are in °C."
+                                           Foreground="#8A92A3" FontSize="14" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1" VerticalAlignment="Center"
+                                          Style="{StaticResource Switch}"
+                                          IsChecked="{Binding AlertsEnabled, Mode=TwoWay}"/>
+                        </Grid>
+
+                        <ItemsControl ItemsSource="{Binding Thresholds}" Margin="0,18,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Title}" Foreground="White" FontSize="15"
+                                                   VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <Button Content="&#x2212;" Style="{StaticResource StepButton}"
+                                                    Command="{Binding DecreaseCommand}"/>
+                                            <TextBlock Text="{Binding Text}" Width="84" TextAlignment="Center"
+                                                       Foreground="White" FontSize="15" VerticalAlignment="Center"/>
+                                            <Button Content="+" Style="{StaticResource StepButton}"
+                                                    Command="{Binding IncreaseCommand}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Content="Send test alert" Style="{StaticResource ActionButton}"
+                                HorizontalAlignment="Left" Margin="0,16,0,0"
+                                Command="{Binding SendTestAlertCommand}"/>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
+</file>
+
+<file path=".github/workflows/windows-release.yml">
+name: Build Gaugr for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish self-contained Windows executable
+        run: >-
+          dotnet publish Gaugr/Gaugr.App/Gaugr.App.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output ./publish
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+
+      - name: Rename application executable
+        run: Rename-Item ./publish/Gaugr.App.exe Gaugr.exe
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $version = if ($env:GITHUB_REF -match '^refs/tags/v(.+)$') { $Matches[1] } else { '0.1.0' }
+          $compiler = @(
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ChocolateyInstall\lib\innosetup\tools\ISCC.exe"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $compiler) {
+            $compiler = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          }
+          if (-not $compiler) {
+            throw "Could not locate ISCC.exe. Inno Setup may be installed in a different location."
+          }
+          & $compiler "/DMyAppVersion=$version" "installer/Gaugr.iss"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload portable executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gaugr-portable-windows-x64
+          path: ./publish/Gaugr.exe
+          if-no-files-found: error
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gaugr-installer-windows-x64
+          path: ./publish/Gaugr-Setup.exe
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Gaugr ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            ./publish/Gaugr.exe
+            ./publish/Gaugr-Setup.exe
+</file>
+
+<file path="Gaugr/Gaugr.App/Controls/MetricCard.xaml.cs">
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+namespace Gaugr.App.Controls;
+
+public partial class MetricCard : UserControl
+{
+    public MetricCard() => InitializeComponent();
+
+    public static readonly DependencyProperty TitleProperty =
+        DependencyProperty.Register(nameof(Title), typeof(string), typeof(MetricCard), new PropertyMetadata(""));
+    public static readonly DependencyProperty SubtitleProperty =
+        DependencyProperty.Register(nameof(Subtitle), typeof(string), typeof(MetricCard), new PropertyMetadata(""));
+    public static readonly DependencyProperty UnitProperty =
+        DependencyProperty.Register(nameof(Unit), typeof(string), typeof(MetricCard), new PropertyMetadata(""));
+    public static readonly DependencyProperty CaptionProperty =
+        DependencyProperty.Register(nameof(Caption), typeof(string), typeof(MetricCard), new PropertyMetadata(""));
+    public static readonly DependencyProperty GlyphProperty =
+        DependencyProperty.Register(nameof(Glyph), typeof(string), typeof(MetricCard), new PropertyMetadata(""));
+    public static readonly DependencyProperty ValueProperty =
+        DependencyProperty.Register(nameof(Value), typeof(double), typeof(MetricCard), new PropertyMetadata(0.0));
+    public static readonly DependencyProperty GaugeStartProperty =
+        DependencyProperty.Register(nameof(GaugeStart), typeof(Color), typeof(MetricCard),
+            new PropertyMetadata(Color.FromRgb(120, 215, 255)));
+    public static readonly DependencyProperty GaugeEndProperty =
+        DependencyProperty.Register(nameof(GaugeEnd), typeof(Color), typeof(MetricCard),
+            new PropertyMetadata(Color.FromRgb(40, 110, 255)));
+    public static readonly DependencyProperty ReadoutTextProperty =
+        DependencyProperty.Register(nameof(ReadoutText), typeof(string), typeof(MetricCard), new PropertyMetadata("0"));
+    public static readonly DependencyProperty IsAvailableProperty =
+        DependencyProperty.Register(nameof(IsAvailable), typeof(bool), typeof(MetricCard), new PropertyMetadata(true));
+    public static readonly DependencyProperty UnavailableTextProperty =
+        DependencyProperty.Register(nameof(UnavailableText), typeof(string), typeof(MetricCard),
+            new PropertyMetadata("Sensor unavailable"));
+    public static readonly DependencyProperty ViewMoreCommandProperty =
+        DependencyProperty.Register(nameof(ViewMoreCommand), typeof(ICommand), typeof(MetricCard), new PropertyMetadata(null));
+    public static readonly DependencyProperty ViewMoreParameterProperty =
+        DependencyProperty.Register(nameof(ViewMoreParameter), typeof(object), typeof(MetricCard), new PropertyMetadata(null));
+
+    public string Title { get => (string)GetValue(TitleProperty); set => SetValue(TitleProperty, value); }
+    public string Subtitle { get => (string)GetValue(SubtitleProperty); set => SetValue(SubtitleProperty, value); }
+    public string Unit { get => (string)GetValue(UnitProperty); set => SetValue(UnitProperty, value); }
+    public string Caption { get => (string)GetValue(CaptionProperty); set => SetValue(CaptionProperty, value); }
+    public string Glyph { get => (string)GetValue(GlyphProperty); set => SetValue(GlyphProperty, value); }
+    public double Value { get => (double)GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
+    public Color GaugeStart { get => (Color)GetValue(GaugeStartProperty); set => SetValue(GaugeStartProperty, value); }
+    public Color GaugeEnd { get => (Color)GetValue(GaugeEndProperty); set => SetValue(GaugeEndProperty, value); }
+    // the number shown in the middle; Value only drives the gauge fill
+    public string ReadoutText { get => (string)GetValue(ReadoutTextProperty); set => SetValue(ReadoutTextProperty, value); }
+    public bool IsAvailable { get => (bool)GetValue(IsAvailableProperty); set => SetValue(IsAvailableProperty, value); }
+    public string UnavailableText { get => (string)GetValue(UnavailableTextProperty); set => SetValue(UnavailableTextProperty, value); }
+    public ICommand? ViewMoreCommand { get => (ICommand?)GetValue(ViewMoreCommandProperty); set => SetValue(ViewMoreCommandProperty, value); }
+    public object? ViewMoreParameter { get => GetValue(ViewMoreParameterProperty); set => SetValue(ViewMoreParameterProperty, value); }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Services/HardwareMonitorService.cs">
+using LibreHardwareMonitor.Hardware;
+using System.IO;
+
+namespace Gaugr.App.Services;
+
+public record FanReading(string Name, double Rpm);
+
+public record HardwareSnapshot(
+    string CpuName, double CpuTemp, double CpuLoad, double? CpuClockMhz,
+    string GpuName, double GpuTemp, double GpuLoad,
+    double? GpuCoreClockMhz, double? GpuMemoryClockMhz, double? VramUsedMb, double? VramTotalMb,
+    double RamPercent, string RamLabel,
+    double StoragePercent, string StorageLabel,
+    IReadOnlyList<FanReading> Fans);
+
+public sealed class HardwareMonitorService : IDisposable
+{
+    private readonly Computer _computer = new()
+    {
+        IsCpuEnabled = true,
+        IsGpuEnabled = true,
+        IsMemoryEnabled = true,
+        IsMotherboardEnabled = true
+    };
+
+    public HardwareMonitorService() => _computer.Open();
+
+    public HardwareSnapshot Read()
+    {
+        string cpuName = "CPU", gpuName = "GPU";
+        double cpuTemp = 0, cpuLoad = 0, gpuTemp = 0, gpuLoad = 0;
+        double ramPercent = 0, ramUsed = 0, ramAvail = 0;
+        double? cpuClock = null, gpuCore = null, gpuMem = null, vramUsed = null, vramTotal = null;
+        var fans = new List<FanReading>();
+
+        foreach (var hw in _computer.Hardware)
+        {
+            hw.Update();
+
+            switch (hw.HardwareType)
+            {
+                case HardwareType.Cpu:
+                    cpuName = hw.Name;
+                    cpuTemp = Get(hw, SensorType.Temperature, "Tctl", "Package", "Average", "Core");
+                    cpuLoad = Get(hw, SensorType.Load, "CPU Total");
+
+                    var clocks = hw.Sensors
+                        .Where(s => s.SensorType == SensorType.Clock && s.Value > 0
+                                    && s.Name.StartsWith("Core", StringComparison.OrdinalIgnoreCase)
+                                    && !s.Name.Contains("Effective", StringComparison.OrdinalIgnoreCase))
+                        .Select(s => (double)s.Value!.Value)
+                        .ToList();
+                    cpuClock = clocks.Count > 0 ? clocks.Average() : null;
+                    break;
+
+                case HardwareType.GpuNvidia:
+                case HardwareType.GpuAmd:
+                case HardwareType.GpuIntel:
+                    if (hw.HardwareType == HardwareType.GpuNvidia || gpuName == "GPU")
+                    {
+                        gpuName = hw.Name;
+                        gpuTemp = Get(hw, SensorType.Temperature, "GPU Core");
+                        gpuLoad = Get(hw, SensorType.Load, "GPU Core");
+                        gpuCore = GetOrNull(hw, SensorType.Clock, "GPU Core");
+                        gpuMem = GetOrNull(hw, SensorType.Clock, "GPU Memory");
+                        vramUsed = GetOrNull(hw, SensorType.SmallData, "GPU Memory Used");
+                        vramTotal = GetOrNull(hw, SensorType.SmallData, "GPU Memory Total");
+                    }
+                    break;
+
+                case HardwareType.Memory:
+                    // With the PawnIO driver installed, individual DIMMs can also appear as Memory
+                    // hardware; only the total-memory entry has the "Memory" load sensor.
+                    var memoryLoad = GetOrNull(hw, SensorType.Load, "Memory");
+                    if (memoryLoad is null) break;
+
+                    ramPercent = memoryLoad.Value;
+                    ramUsed = Get(hw, SensorType.Data, "Memory Used");
+                    ramAvail = Get(hw, SensorType.Data, "Memory Available");
+                    break;
+            }
+
+            CollectFans(hw, fans);
+        }
+
+        double storagePercent = 0;
+        string storageLabel = "Storage";
+        try
+        {
+            var drive = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory)!);
+            double total = drive.TotalSize;
+            double free = drive.AvailableFreeSpace;
+            storagePercent = (total - free) / total * 100;
+            storageLabel = $"{drive.Name.TrimEnd('\\')}  {free / 1_073_741_824.0:0} GB free";
+        }
+        catch { /* leave defaults */ }
+
+        string ramLabel = $"{ramUsed:0.0} / {ramUsed + ramAvail:0.0} GB";
+
+        return new HardwareSnapshot(
+            cpuName, cpuTemp, cpuLoad, cpuClock,
+            gpuName, gpuTemp, gpuLoad, gpuCore, gpuMem, vramUsed, vramTotal,
+            ramPercent, ramLabel, storagePercent, storageLabel, fans);
+    }
+
+    // Fan sensors usually live on the motherboard's sub-hardware (the "Super I/O" chip)
+    private static void CollectFans(IHardware hw, List<FanReading> fans)
+    {
+        foreach (var s in hw.Sensors)
+            if (s.SensorType == SensorType.Fan && s.Value > 0)
+                fans.Add(new FanReading(s.Name, s.Value!.Value));
+
+        foreach (var sub in hw.SubHardware)
+        {
+            sub.Update();
+            CollectFans(sub, fans);
+        }
+    }
+
+    // Same as Get, but returns null when the sensor doesn't exist (so the page can hide the row)
+    private static double? GetOrNull(IHardware hw, SensorType type, string hint)
+    {
+        var sensors = hw.Sensors.Where(s => s.SensorType == type && s.Value.HasValue).ToList();
+        var match =
+            sensors.FirstOrDefault(s => s.Name.Equals(hint, StringComparison.OrdinalIgnoreCase)) ??
+            sensors.FirstOrDefault(s => s.Name.Contains(hint, StringComparison.OrdinalIgnoreCase));
+        return match?.Value;
+    }
+
+    private static double Get(IHardware hw, SensorType type, params string[] hints)
+    {
+        var sensors = hw.Sensors.Where(s => s.SensorType == type && s.Value.HasValue).ToList();
+
+        foreach (var hint in hints)
+        {
+            var match =
+                sensors.FirstOrDefault(s => s.Name.Equals(hint, StringComparison.OrdinalIgnoreCase)) ??
+                sensors.FirstOrDefault(s => s.Name.Contains(hint, StringComparison.OrdinalIgnoreCase));
+            if (match != null) return match.Value!.Value;
+        }
+        return sensors.FirstOrDefault()?.Value ?? 0;
+    }
+
+    public void Dispose() => _computer.Close();
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/ViewModels/OverviewViewModel.cs">
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Gaugr.App.Services;
+
+namespace Gaugr.App.ViewModels;
+
+public partial class OverviewViewModel : ObservableObject
+{
+    private readonly SettingsService _settings;
+    private readonly Action<string> _navigate;
+
+    [ObservableProperty] private string _cpuName = "CPU";
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(CpuAvailable))] private double _cpuTemp;
+    [ObservableProperty] private string _cpuReadout = "0";
+    [ObservableProperty] private string _gpuName = "GPU";
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(GpuAvailable))] private double _gpuTemp;
+    [ObservableProperty] private string _gpuReadout = "0";
+    [ObservableProperty] private string _temperatureLabel = "°C";
+    [ObservableProperty] private string _ramLabel = "RAM";
+    [ObservableProperty] private double _ramPercent;
+    [ObservableProperty] private string _ramReadout = "0";
+    [ObservableProperty] private string _storageLabel = "Storage";
+    [ObservableProperty] private double _storagePercent;
+    [ObservableProperty] private string _storageReadout = "0";
+    [ObservableProperty] private double _health = 100;
+    [ObservableProperty] private string _healthLabel = "Good";
+
+    // a temperature of 0 means the sensor returned nothing (e.g. PawnIO is not installed)
+    public bool CpuAvailable => CpuTemp > 0;
+    public bool GpuAvailable => GpuTemp > 0;
+
+    public string WelcomeText { get; } = $"Welcome back, {Environment.UserName}";
+
+    public OverviewViewModel(MonitorHub hub, SettingsService settings, Action<string> navigate)
+    {
+        _settings = settings;
+        _navigate = navigate;
+
+        hub.Updated += Apply;
+        settings.Changed += () =>
+        {
+            if (hub.Latest is { } latest) Apply(latest);
+        };
+        if (hub.Latest is { } s) Apply(s);
+    }
+
+    [RelayCommand]
+    private void ViewMore(string page) => _navigate(page);
+
+    private void Apply(HardwareSnapshot s)
+    {
+        CpuName = s.CpuName;
+        CpuTemp = s.CpuTemp;
+        CpuReadout = $"{_settings.ConvertTemperature(s.CpuTemp):0}";
+        GpuName = s.GpuName;
+        GpuTemp = s.GpuTemp;
+        GpuReadout = $"{_settings.ConvertTemperature(s.GpuTemp):0}";
+        TemperatureLabel = _settings.TemperatureLabel;
+        RamLabel = s.RamLabel;
+        RamPercent = s.RamPercent;
+        RamReadout = $"{s.RamPercent:0}";
+        StorageLabel = s.StorageLabel;
+        StoragePercent = s.StoragePercent;
+        StorageReadout = $"{s.StoragePercent:0}";
+
+        // Simple score: the less temperature, memory and disk pressure, the healthier.
+        double stress = (TempStress(s.CpuTemp) + TempStress(s.GpuTemp) + s.RamPercent + s.StoragePercent) / 4;
+        Health = Math.Round(Math.Clamp(100 - stress, 0, 100));
+        HealthLabel = Health >= 75 ? "Good" : Health >= 50 ? "Fair" : "Poor";
+    }
+
+    // 30 °C counts as no stress, 100 °C as maximum (always judged in °C)
+    private static double TempStress(double celsius) => Math.Clamp((celsius - 30) / 70 * 100, 0, 100);
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Controls/MetricCard.xaml">
+<UserControl x:Class="Gaugr.App.Controls.MetricCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Gaugr.App.Controls"
+             x:Name="root">
+    <UserControl.Resources>
+        <!-- the readout is replaced by a dash placeholder when the sensor gives no value -->
+        <Style x:Key="WhenAvailable" TargetType="FrameworkElement">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsAvailable, RelativeSource={RelativeSource AncestorType=controls:MetricCard}}"
+                             Value="False">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="WhenUnavailable" TargetType="FrameworkElement">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsAvailable, RelativeSource={RelativeSource AncestorType=controls:MetricCard}}"
+                             Value="False">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ViewMoreButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="#161920" BorderBrush="#232733" BorderThickness="1"
+                                CornerRadius="10" Padding="18,10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#1F2330"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#343A4D"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border BorderBrush="#1C2028" BorderThickness="1" CornerRadius="22" Padding="26" Margin="8">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#13151C" Offset="0"/>
+                <GradientStop Color="#0C0E13" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.Background>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Width="50" Height="50" CornerRadius="14" HorizontalAlignment="Left"
+                        Background="#171A22" BorderBrush="#232733" BorderThickness="1">
+                    <TextBlock Text="{Binding Glyph, ElementName=root}"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="22" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <TextBlock Grid.Row="1" Text="{Binding Title, ElementName=root}" Margin="0,18,0,0"
+                           Foreground="White" FontSize="26" FontWeight="SemiBold"/>
+                <TextBlock Grid.Row="2" Text="{Binding Subtitle, ElementName=root}"
+                           Foreground="#8A92A3" FontSize="14" Margin="0,4,12,0"
+                           TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+
+                <Button Grid.Row="3" Content="View more" HorizontalAlignment="Left" Margin="0,16,0,0"
+                        Style="{StaticResource ViewMoreButton}"
+                        Command="{Binding ViewMoreCommand, ElementName=root}"
+                        CommandParameter="{Binding ViewMoreParameter, ElementName=root}"/>
+            </Grid>
+
+            <Grid Grid.Column="1" Width="230" Height="230" VerticalAlignment="Center">
+                <controls:TickGauge Value="{Binding Value, ElementName=root}"
+                                    StartColor="{Binding GaugeStart, ElementName=root}"
+                                    EndColor="{Binding GaugeEnd, ElementName=root}"/>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,18,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                Style="{StaticResource WhenAvailable}">
+                        <TextBlock Text="{Binding ReadoutText, ElementName=root}"
+                                   Foreground="White" FontSize="52" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Unit, ElementName=root}"
+                                   Foreground="#8A92A3" FontSize="18" Margin="3,8,0,0"
+                                   VerticalAlignment="Top"/>
+                    </StackPanel>
+                    <TextBlock Text="--" Foreground="#5A6072" FontSize="52" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" Style="{StaticResource WhenUnavailable}"/>
+                    <TextBlock Text="{Binding Caption, ElementName=root}"
+                               Foreground="#B4BAC8" FontSize="14"
+                               HorizontalAlignment="Center" Style="{StaticResource WhenAvailable}"/>
+                    <TextBlock Text="{Binding UnavailableText, ElementName=root}"
+                               Foreground="#B4BAC8" FontSize="13"
+                               HorizontalAlignment="Center" Style="{StaticResource WhenUnavailable}"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>
+</file>
+
+<file path="Gaugr/Gaugr.App/Views/OverviewView.xaml">
+<UserControl x:Class="Gaugr.App.Views.OverviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Gaugr.App.Controls">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="8,0,0,22">
+            <TextBlock Text="Overview" Foreground="White" FontSize="14"/>
+            <TextBlock Text="{Binding WelcomeText}" Foreground="White" FontSize="38"
+                       FontWeight="Light" Margin="0,22,0,0"/>
+            <TextBlock Text="How's your PC running today?" Foreground="#8A92A3" FontSize="15" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- health score -->
+            <Border Margin="8" Width="150" CornerRadius="22" Padding="18,22"
+                    BorderBrush="#1C2028" BorderThickness="1">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#13151C" Offset="0"/>
+                        <GradientStop Color="#0C0E13" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="&#xEB51;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   Foreground="#B4BAC8" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="Health" Foreground="#B4BAC8" FontSize="15" Margin="8,0,0,0"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Margin="0,12,0,0" HorizontalAlignment="Center"
+                            Background="#10151A" BorderBrush="#1B2A25" BorderThickness="1"
+                            CornerRadius="10" Padding="16,6">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="6" Height="6" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="#33D17A"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HealthLabel}" Value="Fair">
+                                                <Setter Property="Fill" Value="#FFC93C"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding HealthLabel}" Value="Poor">
+                                                <Setter Property="Fill" Value="#FF5A1F"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Text="{Binding HealthLabel}" Foreground="White" FontSize="13"
+                                       Margin="8,0,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Grid.Row="2" Margin="0,16,0,0" HorizontalAlignment="Center"
+                               Text="{Binding Health, StringFormat={}{0:0}%}"
+                               Foreground="White" FontSize="22" FontWeight="SemiBold"/>
+
+                    <controls:VerticalMeter Grid.Row="3" Margin="12,16,0,0" HorizontalAlignment="Left"
+                                            Width="68" Value="{Binding Health}"/>
+                </Grid>
+            </Border>
+
+            <UniformGrid Grid.Column="1" Rows="2" Columns="2">
+                <controls:MetricCard Title="CPU" Subtitle="{Binding CpuName}" Glyph="&#xE950;"
+                                     Value="{Binding CpuTemp}" ReadoutText="{Binding CpuReadout}" Unit="{Binding TemperatureLabel}" Caption="Temperature"
+                                     IsAvailable="{Binding CpuAvailable}" UnavailableText="Install PawnIO"
+                                     GaugeStart="#7FD8FF" GaugeEnd="#2F6BFF"
+                                     ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Hardware"/>
+                <controls:MetricCard Title="GPU" Subtitle="{Binding GpuName}" Glyph="&#xE7F4;"
+                                     Value="{Binding GpuTemp}" ReadoutText="{Binding GpuReadout}" Unit="{Binding TemperatureLabel}" Caption="Temperature"
+                                     IsAvailable="{Binding GpuAvailable}"
+                                     GaugeStart="#7FD8FF" GaugeEnd="#2F6BFF"
+                                     ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Hardware"/>
+                <controls:MetricCard Title="RAM" Subtitle="{Binding RamLabel}" Glyph="&#xE945;"
+                                     Value="{Binding RamPercent}" ReadoutText="{Binding RamReadout}" Unit="%" Caption="Utilization"
+                                     GaugeStart="#FFD23C" GaugeEnd="#FF5A1F"
+                                     ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Performance"/>
+                <controls:MetricCard Title="Storage" Subtitle="{Binding StorageLabel}" Glyph="&#xEDA2;"
+                                     Value="{Binding StoragePercent}" ReadoutText="{Binding StorageReadout}" Unit="%" Caption="Utilization"
+                                     GaugeStart="#FFD23C" GaugeEnd="#FF5A1F"
+                                     ViewMoreCommand="{Binding ViewMoreCommand}" ViewMoreParameter="Storage"/>
+            </UniformGrid>
+        </Grid>
+    </Grid>
+</UserControl>
+</file>
+
+<file path="Gaugr/Gaugr.App/App.xaml.cs">
+using System.ComponentModel;
+using System.Windows;
+using Gaugr.App.Services;
+using Gaugr.App.ViewModels;
+
+namespace Gaugr.App;
+
+public partial class App : Application
+{
+    public static SettingsService Settings { get; } = SettingsService.Load();
+    public static MonitorHub Hub { get; } = new(Settings);
+    public static TrayService Tray { get; } = new();
+    public static AlertService Alerts { get; } = new(Hub, Settings, Tray);
+
+    private MainWindow? _window;
+    private OverlayWindow? _overlay;
+    private bool _exiting;
+
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+
+        // the tray icon, not the window, decides when Gaugr quits
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        Tray.OpenRequested += ShowWindow;
+        Tray.ExitRequested += Quit;
+        Tray.OverlayToggleRequested += () => Settings.SetOverlayEnabled(!Settings.OverlayEnabled);
+        Settings.Changed += ApplyOverlay;
+
+        Hub.Start();
+
+        _window = new MainWindow();
+        _window.Closing += OnWindowClosing;
+
+        // "Start with Windows" launches with --minimized so Gaugr waits in the tray
+        if (!e.Args.Contains("--minimized")) _window.Show();
+
+        ApplyOverlay();
+    }
+
+    // Shows or hides the compact overlay to match the setting (from Settings or the tray menu)
+    private void ApplyOverlay()
+    {
+        if (Settings.OverlayEnabled)
+        {
+            _overlay ??= new OverlayWindow(new OverlayViewModel(Hub, Settings), Settings);
+            if (!_overlay.IsVisible) _overlay.Show();
+        }
+        else
+        {
+            _overlay?.Hide();
+        }
+
+        Tray.SetOverlayChecked(Settings.OverlayEnabled);
+    }
+
+    private void ShowWindow()
+    {
+        if (_window is null) return;
+
+        _window.Show();
+        if (_window.WindowState == WindowState.Minimized) _window.WindowState = WindowState.Normal;
+        _window.Activate();
+    }
+
+    private void OnWindowClosing(object? sender, CancelEventArgs e)
+    {
+        if (_exiting) return;
+
+        if (Settings.CloseToTray)
+        {
+            e.Cancel = true;
+            _window?.Hide();
+        }
+        else
+        {
+            Quit();
+        }
+    }
+
+    private void Quit()
+    {
+        _exiting = true;
+        Shutdown();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        Tray.Dispose();
+        Hub.Dispose();
+        base.OnExit(e);
+    }
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/Gaugr.App.csproj">
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Gaugr.ico</ApplicationIcon>
+    <!-- Windows Forms is only used for the system tray icon -->
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- keep Windows Forms names from clashing with their WPF equivalents -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\Gaugr.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.5" />
+  </ItemGroup>
+
+</Project>
+</file>
+
+<file path="Gaugr/Gaugr.App/MainWindow.xaml.cs">
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Interop;
+using Gaugr.App.ViewModels;
+
+namespace Gaugr.App;
+
+public partial class MainWindow : Window
+{
+    private const int DwmUseImmersiveDarkMode = 20;
+    private const int DwmCaptionColor = 35;   // Windows 11 only; ignored on older versions
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        DataContext = new ShellViewModel(App.Hub, App.Settings, App.Alerts);
+        SourceInitialized += (_, _) => DarkenTitleBar();
+    }
+
+    private void DarkenTitleBar()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+
+        int dark = 1;
+        DwmSetWindowAttribute(handle, DwmUseImmersiveDarkMode, ref dark, sizeof(int));
+
+        int caption = 0x0D0908;   // #08090D as 0x00BBGGRR, the window background
+        DwmSetWindowAttribute(handle, DwmCaptionColor, ref caption, sizeof(int));
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+}
+</file>
+
+<file path="Gaugr/Gaugr.App/ViewModels/ShellViewModel.cs">
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Gaugr.App.Services;
+
+namespace Gaugr.App.ViewModels;
+
+public record PlaceholderViewModel(string Title);
+
+public partial class NavItem : ObservableObject
+{
+    public NavItem(string name, string glyph)
+    {
+        Name = name;
+        Glyph = glyph;
+    }
+
+    public string Name { get; }
+    public string Glyph { get; }
+
+    [ObservableProperty] private bool _isSelected;
+}
+
+public partial class ShellViewModel : ObservableObject
+{
+    private readonly OverviewViewModel _overview;
+    private readonly PerformanceViewModel _performance;
+    private readonly HardwareViewModel _hardware;
+    private readonly ProcessesViewModel _processes;
+    private readonly StorageViewModel _storage = new();
+    private readonly SettingsService _settings;
+    private readonly AlertService _alerts;
+    private SettingsViewModel? _settingsPage;
+
+    [ObservableProperty] private object _currentPage;
+
+    public IReadOnlyList<NavItem> NavItems { get; } =
+    [
+        new("Overview", ""),
+        new("Performance", ""),
+        new("Hardware", ""),
+        new("Processes", ""),
+        new("Storage", ""),
+        new("Settings", ""),
+    ];
+
+    public ShellViewModel(MonitorHub hub, SettingsService settings, AlertService alerts)
+    {
+        _settings = settings;
+        _alerts = alerts;
+        _overview = new OverviewViewModel(hub, settings, Navigate);
+        _performance = new PerformanceViewModel(hub, settings);
+        _hardware = new HardwareViewModel(hub);
+        _processes = new ProcessesViewModel();
+        _currentPage = _overview;
+        NavItems[0].IsSelected = true;
+    }
+
+    [RelayCommand]
+    private void Navigate(string name)
+    {
+        _processes.SetActive(name == "Processes");
+        if (name == "Storage") _storage.Refresh();
+
+        if (name == "Settings")
+        {
+            _settingsPage ??= new SettingsViewModel(_settings, new StartupService(), _alerts.SendTest);
+            _settingsPage.Refresh();
+        }
+
+        foreach (var item in NavItems)
+            item.IsSelected = item.Name == name;
+
+        CurrentPage = name switch
+        {
+            "Overview" => (object)_overview,
+            "Performance" => _performance,
+            "Hardware" => _hardware,
+            "Processes" => _processes,
+            "Storage" => _storage,
+            "Settings" => _settingsPage!,
+            _ => new PlaceholderViewModel(name)
+        };
+    }
+}
+</file>
+
+<file path="README.md">
+# Gaugr
+
+**A lightweight Windows PC monitoring dashboard built with WPF and C#.**
+
+Gaugr brings your PC's hardware readings and performance history into one clean, dark desktop interface. It is an actively developed project, with a focus on useful monitoring, readable visualizations, and a polished native Windows experience.
+
+> **Status:** Early development. Features and hardware sensor support may vary by system.
+
+## Features
+
+- **Overview** — at-a-glance CPU and GPU temperatures, memory usage, and system-drive capacity.
+- **Performance** — live CPU, GPU, and RAM history charts with 60-second and 5-minute views.
+- **Hardware** — detected processor, graphics, memory, motherboard, clock, and fan information where available.
+- **Storage** — capacity, free space, and usage for every detected drive.
+- **Settings** — temperature unit (°C/°F), refresh rate, starting Gaugr with Windows, and keeping it running in the system tray. Settings are saved in `%AppData%\Gaugr\settings.json`.
+- **Compact overlay** — a small always-on-top panel with CPU, GPU, and memory readings that you can drag anywhere. Toggle it from Settings or the tray menu.
+- **Alerts** — Windows notifications when CPU or GPU temperature, memory usage, or storage usage crosses a limit you choose.
+- **Processes** — searchable process list with CPU and memory usage, sorting, and periodic refresh.
+- **Hardware monitoring** — sensor readings collected with LibreHardwareMonitor.
+
+Gaugr requests administrator rights on launch, because Windows only exposes CPU temperatures and fan speeds to elevated processes. When running from a terminal or Visual Studio, start that tool as administrator.
+
+**CPU temperature needs the PawnIO driver.** Gaugr reads sensors through LibreHardwareMonitor, which uses the open-source [PawnIO](https://pawnio.eu) driver for low-level CPU access. If PawnIO is not installed, the CPU gauge shows "--" and asks you to install it. Install PawnIO once and restart Gaugr.
+
+**Windows SmartScreen:** Gaugr's installer and executable are not code-signed yet, so Windows may warn that the publisher is unknown. Choose **More info → Run anyway** if you trust the download.
+
+Some readings depend on hardware, drivers, and sensor support. Gaugr does not yet expose every metric on every PC.
+
+## Built with
+
+- C# and .NET 10
+- WPF and XAML
+- [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet)
+- [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor)
+- [LiveCharts2](https://github.com/Live-Charts/LiveCharts2)
+
+## Getting started
+
+### Requirements
+
+- Windows
+- Visual Studio with the **.NET desktop development** workload
+- The .NET 10 SDK
+
+### Run from Visual Studio
+
+1. Clone or download this repository.
+2. Open `Gaugr/Gaugr.slnx` in Visual Studio.
+3. Allow NuGet packages to restore.
+4. Set `Gaugr.App` as the startup project if needed.
+5. Build and run the app.
+
+### Build from the command line
+
+From the repository root:
+
+```powershell
+dotnet build .\Gaugr\Gaugr.App\Gaugr.App.csproj
+dotnet run --project .\Gaugr\Gaugr.App\Gaugr.App.csproj
+```
+
+## Project structure
+
+```text
+Gaugr/
+└── Gaugr/
+    ├── Gaugr.slnx
+    └── Gaugr.App/
+        ├── Controls/       # Reusable UI controls
+        ├── Services/       # Hardware and process sampling
+        ├── ViewModels/     # UI state and presentation logic
+        ├── Views/          # WPF pages
+        ├── App.xaml
+        └── MainWindow.xaml
+```
+
+## Roadmap
+
+- [ ] Improve missing/unavailable sensor handling
+- [ ] Refine temperature chart scaling and metric presentation
+- [x] Add a dedicated storage page for all detected drives
+- [x] Add configurable monitoring and alert settings
+- [ ] Improve release packaging and documentation
+
+## Feedback
+
+Bug reports, feature suggestions, and constructive feedback are welcome through GitHub Issues. Please include your Windows version and relevant hardware details when reporting a hardware-reading issue. Do not include private information in issue reports.
+
+## License and permitted use
+
+Gaugr is **proprietary software**, not an open-source-licensed project. The source is published for transparency and review. Under the [Gaugr Proprietary License](LICENSE), individuals may inspect, compile, and run Gaugr for personal, non-commercial use. Commercial use, redistribution, and broader reuse require prior written permission.
+
+Third-party libraries have their own licenses; see their respective projects and package notices. The Gaugr license does not override those licenses.
+
+For commercial licensing or other permissions, contact [@zaidwh0x](https://github.com/zaidwh0x).
+</file>
+
+<file path="Gaugr/Gaugr.App/MainWindow.xaml">
+<Window x:Class="Gaugr.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Gaugr.App.ViewModels"
+        xmlns:views="clr-namespace:Gaugr.App.Views"
+        Title="Gaugr" Icon="pack://application:,,,/Assets/Gaugr.ico" Height="780" Width="1280" MinHeight="640" MinWidth="1060"
+        Background="#08090D" WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI Variable Display, Segoe UI">
+    <Window.Resources>
+        <Style x:Key="NavButton" TargetType="Button">
+            <Setter Property="Foreground" Value="#8A92A3"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="12" Padding="14,11" Background="{TemplateBinding Background}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#14171F"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="#2A2D36"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <DataTemplate DataType="{x:Type vm:OverviewViewModel}">
+            <views:OverviewView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PerformanceViewModel}">
+            <views:PerformanceView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ProcessesViewModel}">
+            <views:ProcessesView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:HardwareViewModel}">
+            <views:HardwareView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:StorageViewModel}">
+            <views:StorageView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+            <views:SettingsView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PlaceholderViewModel}">
+            <views:PlaceholderView/>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- purple glow in the bottom-left corner -->
+        <Ellipse Grid.ColumnSpan="2" Width="900" Height="520" IsHitTestVisible="False"
+                 HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="-340,0,0,-300">
+            <Ellipse.Fill>
+                <RadialGradientBrush>
+                    <GradientStop Color="#557C5CFF" Offset="0"/>
+                    <GradientStop Color="#00000000" Offset="1"/>
+                </RadialGradientBrush>
+            </Ellipse.Fill>
+        </Ellipse>
+
+        <Border BorderBrush="#161A24" BorderThickness="0,0,1,0" Padding="20,30">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#0B0D13" Offset="0"/>
+                    <GradientStop Color="#0D1328" Offset="0.55"/>
+                    <GradientStop Color="#0B0D13" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+
+            <StackPanel>
+                <TextBlock Text="GAUGR" Foreground="White" FontSize="28" FontWeight="ExtraBold"
+                           FontStyle="Italic" Margin="12,0,0,32"/>
+
+                <ItemsControl ItemsSource="{Binding NavItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource NavButton}"
+                                    Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding Name}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Glyph}" Width="22"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="16" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Name}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" Margin="32,28,32,32"/>
+    </Grid>
+</Window>
+</file>
+
+</files>
